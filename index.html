@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- PWA 设置 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#D4A574">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="中泥坊美容">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>中泥坊美容</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -790,6 +797,17 @@ renderHome();
 renderBooking();
 renderProducts();
 renderMy();
+</script>
+<script>
+// 注册 Service Worker（离线缓存）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+// 添加"安装到桌面"提示
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  window._installPrompt = e;
+});
 </script>
 </body>
 </html>

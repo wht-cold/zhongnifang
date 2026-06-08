@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>中泥坊 · AI营销助手</title>
+<style>
+:root{--gold:#D4A574;--gold2:#B8895A;--pink:#f5ede4;--bg:#fdf9f5;--card:#fff;--t:#3C2A1E;--t2:#8B7355;--t3:#B0A090}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--t);min-height:100vh;display:flex;justify-content:center;line-height:1.5}
+.app{width:100%;max-width:480px;min-height:100vh;padding:16px 16px 40px}
+/* 顶栏 */
+.header{text-align:center;padding:24px 0 16px}
+.header .logo{font-size:44px;margin-bottom:8px}
+.header h1{font-size:22px;color:var(--gold2);letter-spacing:1px}
+.header .sub{font-size:13px;color:var(--t3);margin-top:4px}
+/* 场景选择卡片 */
+.scene-title{font-size:15px;font-weight:600;margin:16px 0 10px;color:var(--t2)}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scene{
+  background:var(--card);border:2px solid transparent;border-radius:14px;padding:16px 12px;
+  cursor:pointer;text-align:center;transition:.25s;box-shadow:0 2px 8px rgba(0,0,0,.04)
+}
+.scene:hover,.scene.sel{border-color:var(--gold);background:var(--pink)}
+.scene .si{font-size:30px;display:block;margin-bottom:6px}
+.scene .st{font-size:13px;font-weight:600}
+.scene .sd{font-size:11px;color:var(--t3);margin-top:2px}
+/* 输入区 */
+.input-area{margin-top:16px}
+.input-area textarea{
+  width:100%;height:80px;padding:14px;border:1.5px solid #e8ddd2;border-radius:12px;
+  font-size:15px;resize:none;outline:none;font-family:inherit;background:var(--card);
+  line-height:1.6
+}
+.input-area textarea:focus{border-color:var(--gold)}
+/* 大按钮 */
+.big-btn{
+  display:block;width:100%;padding:16px;border:none;border-radius:14px;
+  font-size:17px;font-weight:600;cursor:pointer;text-align:center;
+  transition:.25s;margin-top:12px
+}
+.btn-generate{background:linear-gradient(135deg,#D4A574,#C4946A);color:#fff;letter-spacing:2px}
+.btn-generate:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(212,165,116,.35)}
+.btn-generate:disabled{background:#ccc;transform:none;box-shadow:none}
+.btn-copy{background:#fff;color:var(--gold);border:2px solid var(--gold)}
+/* 结果区 */
+.result{display:none;margin-top:20px}
+.result .section-label{font-size:14px;font-weight:600;color:var(--gold2);margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.copy-box{
+  background:var(--card);border-radius:14px;padding:20px;position:relative;
+  border:1px solid #eee;white-space:pre-wrap;font-size:15px;line-height:1.9;
+  box-shadow:0 2px 8px rgba(0,0,0,.03)
+}
+.copy-box .emoji{font-size:20px}
+.copy-btn{
+  position:absolute;top:12px;right:12px;padding:8px 16px;background:var(--pink);
+  border:none;border-radius:20px;font-size:13px;color:var(--gold2);
+  cursor:pointer;font-weight:500
+}
+.copy-btn:active{background:#e8d5c4}
+.img-box{
+  background:var(--card);border-radius:14px;overflow:hidden;border:1px solid #eee;
+  min-height:200px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.03)
+}
+.img-box img{width:100%;display:block}
+.img-box .loading{text-align:center;color:var(--t3);padding:40px}
+.img-box .loading .spinner{font-size:40px;animation:spin 1.5s linear infinite;display:block;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* 预览卡片 */
+.preview-card{
+  background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);
+  border:1px solid #eee
+}
+.preview-card .pc-header{
+  padding:12px 16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid #f0ebe4;font-size:14px;font-weight:500
+}
+.preview-card .pc-header .avatar{
+  width:40px;height:40px;border-radius:50%;background:var(--pink);
+  display:flex;align-items:center;justify-content:center;font-size:20px
+}
+.preview-card .pc-body{padding:16px;font-size:15px;line-height:1.9;white-space:pre-wrap}
+.preview-card .pc-img{width:100%}
+.preview-card .pc-img img{width:100%;display:block}
+.preview-card .pc-footer{padding:12px 16px;font-size:12px;color:var(--t3);border-top:1px solid #f0ebe4}
+/* Toast */
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;padding:12px 24px;border-radius:10px;font-weight:500;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;background:#10b981;color:#fff}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="header">
+  <div class="logo">🌸</div>
+  <h1>AI 营销助手</h1>
+  <div class="sub">一键生成朋友圈文案 & 配图</div>
+</div>
+
+<!-- 场景选择 -->
+<div class="scene-title">📌 选择推销场景</div>
+<div class="scenes" id="scenes">
+  <div class="scene sel" onclick="pickScene(this,'new')"><span class="si">🆕</span><span class="st">新品上线</span><span class="sd">新项目/新产品</span></div>
+  <div class="scene" onclick="pickScene(this,'sale')"><span class="si">🎉</span><span class="st">限时优惠</span><span class="sd">打折/活动/促销</span></div>
+  <div class="scene" onclick="pickScene(this,'tips')"><span class="si">💡</span><span class="st">护肤小知识</span><span class="sd">专业科普吸引顾客</span></div>
+  <div class="scene" onclick="pickScene(this,'review')"><span class="si">💬</span><span class="st">顾客好评</span><span class="sd">晒效果图/好评</span></div>
+  <div class="scene" onclick="pickScene(this,'festival')"><span class="si">🎊</span><span class="st">节日营销</span><span class="sd">节日/节气借势</span></div>
+  <div class="scene" onclick="pickScene(this,'daily')"><span class="si">📷</span><span class="st">日常营业</span><span class="sd">温馨日常互动</span></div>
+</div>
+
+<!-- 补充输入 -->
+<div class="input-area">
+  <textarea id="extraInput" placeholder="补充你想推销的产品/活动内容...&#10;比如：玻尿酸补水项目 198元体验价"></textarea>
+</div>
+
+<!-- 生成按钮 -->
+<button class="big-btn btn-generate" id="genBtn" onclick="generate()">
+  ✨ 一键生成文案+配图
+</button>
+
+<!-- 结果区 -->
+<div class="result" id="result">
+  <!-- 预览卡片 -->
+  <div class="section-label">📱 朋友圈预览效果</div>
+  <div class="preview-card">
+    <div class="pc-header">
+      <div class="avatar" id="avatarIcon">🌸</div>
+      <div>
+        <div style="font-weight:600;">中泥坊美容</div>
+        <div style="font-size:11px;color:var(--t3);">刚刚</div>
+      </div>
+    </div>
+    <div class="pc-body" id="previewText"></div>
+    <div class="pc-img" id="previewImg"></div>
+    <div class="pc-footer">❤️ 赞  💬 评论</div>
+  </div>
+
+  <!-- 文案 -->
+  <div class="section-label">📝 文案（点右上角复制）</div>
+  <div class="copy-box" id="textResult">
+    <button class="copy-btn" onclick="copyText()">📋 复制文案</button>
+  </div>
+
+  <!-- 配图 -->
+  <div class="section-label">🎨 AI配图</div>
+  <div class="img-box" id="imgResult">
+    <div class="loading"><span class="spinner">🎨</span>AI正在生成配图...</div>
+  </div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var currentScene = 'new';
+var sceneNames = {new:'新品上线',sale:'限时优惠',tips:'护肤知识',review:'顾客好评',festival:'节日营销',daily:'日常营业'};
+
+function pickScene(el, scene){
+  currentScene = scene;
+  document.querySelectorAll('.scene').forEach(function(s){s.classList.remove('sel')});
+  el.classList.add('sel');
+}
+
+// AI文案生成器 — 模板+智能组合
+function generateCopy(scene, extra){
+  var shop='中泥坊美容';
+  var templates = {
+    new: [
+      '姐妹们！'+(extra||'我们上新项目啦')+'🌸\n\n✨ '+(extra||'全新体验，效果超乎想象')+'\n📌 限时尝鲜价，仅限前20名\n📍'+shop+'\n💬 私信我预留名额～',
+      '🔥'+(extra||'新品到店！')+'\n\n做了这么多年美容，这次的新项目真的不一样。\n效果看得见，价格也很美丽💕\n\n📍地址：'+shop+'\n📱扫码预约👇',
+      '好物分享 | '+(extra||'店里新到的项目')+'\n\n试了一次就被圈粉了😍\n效果是真的好！推荐给姐妹们~\n\n💬 想了解的评论区扣1',
+    ],
+    sale: [
+      '🎉限时福利！'+(extra||'超值优惠来啦')+'\n\n💆‍♀️ '+(extra||'指定项目立减100元')+'\n🗓 活动时间：即日起至月底\n👥 仅限20个名额\n\n手慢无！私信我预留～',
+      '姐妹们，这次的活动真的划算！\n'+(extra||'回馈老顾客，优惠力度空前')+'💕\n\n✨ 原价X，现价Y\n🎁 到店还送小礼物\n\n📍'+shop+'\n💬 私信我预留名额',
+      '年中大促🔥\n'+(extra||'所有项目8折起！')+'\n\n错过真的要等明年了😭\n趁现在囤一波，秋冬皮肤全靠现在保养\n\n📍'+shop+'\n💬 私信预约',
+    ],
+    tips: [
+      '💡护肤小课堂 | '+(extra||'关于补水的那些事')+'\n\n很多人以为补水就是多敷面膜，其实不对❌\n真正的补水要从内到外：\n1️⃣ 多喝水\n2️⃣ 选对护肤品\n3️⃣ 定期做深层补水护理\n\n📍'+shop+'\n💆‍♀️ 来店里我帮你看看肤质～',
+      '今日分享✨ '+(extra||'换季护肤注意')+'\n\n换季皮肤容易敏感，记住这三点：\n① 不要频繁换护肤品\n② 做好防晒！防晒！防晒！\n③ 每周深层清洁一次\n\n📍'+shop+'\n有皮肤问题随时问我～',
+      '🌿 '+(extra||'秋季护肤要点')+'\n\n秋冬干燥，皮肤水分流失快\n除了日常护肤品\n建议每周做一次专业补水护理💧\n\n📍'+shop+'\n💬 私信了解补水项目',
+    ],
+    review: [
+      '收到顾客的反馈，满满的感动💕\n\n'+(extra||'一位顾客做了三次护理后，皮肤状态好了很多，特意发微信感谢我')+'\n\n做美容这行，最开心的就是看到顾客变美的那一刻✨\n\n感谢信任，我们会继续努力💪',
+      '顾客说"老师，你手法真舒服"😊\n\n'+(extra||'做美容这么多年，听到这句话还是特别开心')+'\n\n用心服务每一位顾客，是我们一直坚持的事\n\n📍'+shop+'\n💆‍♀️ 新顾客到店有优惠哦～',
+      '🌺 今日份好评\n\n'+(extra||'一位阿姨做完面部护理说：感觉年轻了十岁')+'\n\n其实我们只是用心做好每一个细节\n美丽，值得认真对待💕\n\n📍'+shop,
+    ],
+    festival: [
+      '🎊 '+(extra||'女王节快乐')+' 所有女生！\n\n在这个属于我们的节日里\n送自己一份美丽🌹\n\n💆‍♀️ 节日专属护理套餐\n🎁 到店即送精美礼品\n📍'+shop+'\n💬 私信预约',
+      '🌙 中秋快乐 | '+(extra||'月圆人更美')+'\n\n中秋佳节，团圆时刻\n别忘了也犒劳一下自己💕\n\n✨ 节日限定护理套餐上线\n📍'+shop+'\n💬 提前预约有惊喜',
+      '🏮 '+(extra||'国庆特惠')+'\n\n小长假，除了出去玩\n也可以来店里做个护理放松一下💆‍♀️\n\n📍'+shop+'\n💬 假期正常营业，私信预约哦',
+    ],
+    daily: [
+      '☀️早安 | 元气满满的一天\n\n'+(extra||'今天阳光很好，店里的花也开了')+'\n新的一天，从爱自己开始💕\n\n📍'+shop+'\n💆‍♀️ 今天有位子，约吗？',
+      '🌙晚安 | 睡前分享\n\n'+(extra||'忙碌的一天结束了，敷个面膜犒劳自己')+'\n\n女人，一定要对自己好一点💕\n\n📍'+shop+'\n晚安，明天见～',
+      '📷 今日店内日常\n\n'+(extra||'打扫完毕，泡好花茶，等姐妹们来')+'\n用心准备，只为你来的时候舒服放松🌸\n\n📍'+shop+'\n💬 今天下午还有空位哦',
+    ]
+  };
+  var pool = templates[scene] || templates.daily;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// AI配图生成 — 免费免注册
+function generateImage(scene, extra){
+  var prompts = {
+    new: 'beauty skincare product elegant display, soft pink and gold tones, minimalist, clean aesthetic, professional beauty salon style',
+    sale: 'luxury spa promotion beauty treatment, warm golden lighting, inviting atmosphere, elegantly presented, beauty salon',
+    tips: 'fresh natural skincare ingredients aloe rose water, clean white background, spa aesthetics, soft lighting, healthy skin',
+    review: 'satisfied customer glowing skin beauty treatment results, soft warm lighting, happy relaxed, beauty salon, professional',
+    festival: 'festive celebration beauty spa, elegant decorations, warm inviting, golden accents, beauty salon, festive mood',
+    daily: 'cozy warm beauty salon interior, flowers tea, soft morning light, peaceful atmosphere, clean elegant, welcoming'
+  };
+  var basePrompt = prompts[scene] || prompts.daily;
+  var finalPrompt = basePrompt + (extra ? ', ' + extra : '');
+  var url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(finalPrompt) + '?width=600&height=600&nologo=true&seed=' + Math.floor(Math.random()*10000);
+  return url;
+}
+
+function generate(){
+  var btn = document.getElementById('genBtn');
+  var extra = document.getElementById('extraInput').value.trim();
+  btn.disabled = true;
+  btn.textContent = '⏳ 正在生成...';
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('imgResult').innerHTML = '<div class="loading"><span class="spinner">🎨</span>AI正在生成配图...</div>';
+  document.getElementById('previewImg').innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);">🎨 AI配图生成中...</div>';
+
+  // 生成文案
+  var copy = generateCopy(currentScene, extra);
+  document.getElementById('textResult').innerHTML = '<button class="copy-btn" onclick="copyText()">📋 复制文案</button>' + copy.replace(/\n/g,'<br>');
+  document.getElementById('previewText').innerHTML = copy.replace(/\n/g,'<br>');
+
+  // 生成配图
+  var imgUrl = generateImage(currentScene, extra);
+  var img = new Image();
+  img.onload = function(){
+    document.getElementById('imgResult').innerHTML = '<img src="'+imgUrl+'" alt="AI配图">';
+    document.getElementById('previewImg').innerHTML = '<img src="'+imgUrl+'" alt="AI配图" style="width:100%;display:block">';
+    btn.disabled = false;
+    btn.textContent = '✨ 一键生成文案+配图';
+    document.getElementById('result').scrollIntoView({behavior:'smooth'});
+  };
+  img.onerror = function(){
+    // 降级：用占位图
+    var fallback = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="#f5ede4" width="600" height="400"/><text x="300" y="180" text-anchor="middle" font-size="80">🌸</text><text x="300" y="260" text-anchor="middle" font-size="20" fill="#B8895A">中泥坊美容</text><text x="300" y="300" text-anchor="middle" font-size="14" fill="#B0A090">AI配图 · ' + sceneNames[currentScene] + '</text></svg>');
+    document.getElementById('imgResult').innerHTML = '<img src="'+fallback+'" alt="配图">';
+    document.getElementById('previewImg').innerHTML = '<img src="'+fallback+'" alt="配图" style="width:100%;display:block">';
+    btn.disabled = false;
+    btn.textContent = '✨ 一键生成文案+配图';
+    document.getElementById('result').scrollIntoView({behavior:'smooth'});
+  };
+  img.src = imgUrl;
+}
+
+function copyText(){
+  var text = document.getElementById('textResult').innerText.replace('📋 复制文案\n','').replace(/复制文案\n?/,'');
+  navigator.clipboard.writeText(text).then(function(){
+    showToast('✅ 文案已复制！去朋友圈粘贴吧');
+  }).catch(function(){
+    showToast('请长按文案手动复制');
+  });
+}
+
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show')},2000);
+}
+</script>
+</body>
+</html>

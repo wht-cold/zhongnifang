@@ -318,34 +318,41 @@ function applyFilter(type, btn){
 function addTextOverlay(){
   var text = document.getElementById('overlayText').value.trim();
   if(!text) return;
-  var src = currentImage || uploadedPhoto || document.getElementById('mi').querySelector('img')?.src;
-  if(!src) return;
+  var imgEl = document.getElementById('mi').querySelector('img');
+  var src = imgEl ? imgEl.src : (currentImage || uploadedPhoto);
+  if(!src || src.startsWith('data:image/svg')) return;
 
   var canvas = document.createElement('canvas');
   var ctx = canvas.getContext('2d');
   var img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = function(){
-    canvas.width = img.width; canvas.height = img.height;
+    var w = img.width, h = img.height;
+    canvas.width = w; canvas.height = h;
     ctx.drawImage(img, 0, 0);
-    var fontSize = Math.round(img.width * 0.07);
-    ctx.font = 'bold '+fontSize+'px "PingFang SC","Microsoft YaHei",sans-serif';
-    var tw = ctx.measureText(text).width;
-    var ty = canvas.height - fontSize - 40;
-    // 渐变背景条
-    var grad = ctx.createLinearGradient(0,ty-16,0,ty+fontSize+8);
-    grad.addColorStop(0,'rgba(0,0,0,0)');
-    grad.addColorStop(0.5,'rgba(0,0,0,0.45)');
-    grad.addColorStop(1,'rgba(0,0,0,0.6)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, ty-16, canvas.width, fontSize+32);
-    // 文字
+    // 文字样式
+    var fs = Math.round(w * 0.06);
+    ctx.font = 'bold '+fs+'px "PingFang SC","Microsoft YaHei",sans-serif';
+    // 底部丝带效果
+    var ribbonH = fs + 28;
+    var ribbonY = h - ribbonH - 10;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, ribbonY, w, ribbonH);
+    // 装饰线
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(20, ribbonY + 3); ctx.lineTo(w-20, ribbonY + 3);
+    ctx.stroke();
+    // 白色文字居中
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
-    ctx.fillText(text, canvas.width/2, ty + fontSize);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, w/2, ribbonY + ribbonH/2);
     currentImage = canvas.toDataURL('image/jpeg',0.92);
     setPreviewImg(currentImage);
   };
+  img.onerror = function(){ alert('图片加载失败，请重试'); };
   img.src = src;
 }
 
@@ -354,23 +361,39 @@ function setPreviewImg(src){
   document.getElementById('mi').innerHTML = '<img src="'+src+'">';
 }
 
-// ── AI生图（手动触发） ──
+// ── AI生图（手动触发，30秒超时） ──
 function triggerAIImage(){
   var btn = document.getElementById('aiGenBtn');
+  if(btn.classList.contains('loading')) return;
   var extra = document.getElementById('extraInput').value.trim();
   btn.classList.add('loading');
   btn.innerHTML = '⏳ AI正在生成配图...';
+  btn.style.pointerEvents = 'none';
+
+  var done = false;
+  var timeout = setTimeout(function(){
+    if(!done){ done=true; onAIFail(btn, '生成超时，请重试'); }
+  }, 30000);
 
   loadAIImage(currentScene, extra, function(aiUrl){
+    if(done) return; done = true; clearTimeout(timeout);
     currentImage = aiUrl;
-    uploadedPhoto = null; // 用AI图替换
+    uploadedPhoto = null;
     currentFilter = 'none';
-    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
-    document.querySelector('.filter-btn[data-f="none"]').classList.add('active');
+    var b = document.querySelector('.filter-btn[data-f="none"]');
+    if(b) b.click();
     setPreviewImg(aiUrl);
     btn.classList.remove('loading');
-    btn.innerHTML = '🤖 不满意？AI帮你生成一张新配图';
+    btn.innerHTML = '🤖 不满意？再生成一张不一样的';
+    btn.style.pointerEvents = 'auto';
   });
+}
+
+function onAIFail(btn, msg){
+  btn.classList.remove('loading');
+  btn.innerHTML = '⚠️ '+msg+'，点此重试';
+  btn.style.pointerEvents = 'auto';
+  setTimeout(function(){ btn.innerHTML = '🤖 不满意？AI帮你生成一张新配图'; }, 3000);
 }
 
 function handlePhoto(e){
@@ -515,16 +538,32 @@ function loadAIImage(scene, extra, callback){
   var seed = Math.floor(Math.random()*999999);
   var url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) +
     '?width=400&height=400&nologo=true&seed=' + seed;
+  // 先尝试加载
   var img = new Image();
-  img.onload = function(){ callback(url); };
+  img.crossOrigin = 'anonymous';
+  var loaded = false;
+  var loadTimer = setTimeout(function(){
+    if(!loaded){ loaded=true; callback(getFallback(scene)); }
+  }, 15000); // 15秒超时
+
+  img.onload = function(){
+    if(loaded) return; loaded = true; clearTimeout(loadTimer);
+    callback(url);
+  };
   img.onerror = function(){
-    var colors = {new:'fce4ec,f8bbd0',sale:'fff3e0,ffe0b2',tips:'e8f5e9,c8e6c9',review:'f3e5f5,e1bee7',festival:'fff8e1,ffecb3',daily:'f5f0e8,e8d5c4'};
-    var c = (colors[scene]||colors.daily).split(',');
-    var fb = 'data:image/svg+xml,'+encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#'+c[0]+'"/><stop offset="100%" style="stop-color:#'+c[1]+'"/></linearGradient></defs><rect fill="url(#g)" width="400" height="400"/><text x="200" y="180" text-anchor="middle" font-size="100">🌸</text><text x="200" y="260" text-anchor="middle" font-size="22" fill="#666">'+sceneNames[scene]+'</text></svg>');
-    callback(fb);
+    if(loaded) return; loaded = true; clearTimeout(loadTimer);
+    callback(getFallback(scene));
   };
   img.src = url;
+}
+
+function getFallback(scene){
+  var colors = {new:'fce4ec,f8bbd0',sale:'fff3e0,ffe0b2',tips:'e8f5e9,c8e6c9',review:'f3e5f5,e1bee7',festival:'fff8e1,ffecb3',daily:'f5f0e8,e8d5c4'};
+  var c = (colors[scene]||colors.daily).split(',');
+  var emoji = {new:'🆕',sale:'🎉',tips:'💡',review:'💬',festival:'🎊',daily:'📷'}[scene]||'🌸';
+  return 'data:image/svg+xml,'+encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#'+c[0]+'"/><stop offset="100%" style="stop-color:#'+c[1]+'"/></linearGradient></defs><rect fill="url(#g)" width="400" height="400"/><text x="200" y="180" text-anchor="middle" font-size="100">'+emoji+'</text><text x="200" y="260" text-anchor="middle" font-size="22" fill="#666">AI配图加载失败</text><text x="200" y="300" text-anchor="middle" font-size="14" fill="#999">建议拍照或用模板图</text></svg>');
+}
 }
 
 function generateTemplateImg(scene){

@@ -292,44 +292,27 @@ var currentImage = null;  // 当前显示的图片（原图或处理后）
 var currentFilter = 'none';
 var sceneNames = {new:'新品上线',sale:'限时优惠',tips:'护肤知识',review:'顾客好评',festival:'节日营销',daily:'日常营业'};
 
-// ── 智能调图 ──
+// ── 智能调图（CSS滤镜+Canvas导出） ──
 function applyFilter(type, btn){
   currentFilter = type;
-  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
-  if(btn) btn.classList.add('active');
+  var el = document.querySelector('.filter-btn.active');
+  if(el) el.classList.remove('active');
+  btn.classList.add('active');
 
-  var src = uploadedPhoto || document.getElementById('mi').querySelector('img')?.src;
-  if(!src || src.startsWith('data:image/svg')) return;
+  var imgEl = document.getElementById('mi').querySelector('img');
+  var imgEl2 = document.getElementById('imgResult').querySelector('img');
+  if(!imgEl) return;
 
-  if(type === 'none'){ currentImage = src; setPreviewImg(src); return; }
-
-  var canvas = document.createElement('canvas');
-  var ctx = canvas.getContext('2d');
-  var img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = function(){
-    canvas.width = img.width; canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-    var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    var d = data.data;
-    for(var i=0; i<d.length; i+=4){
-      var r=d[i], g=d[i+1], b=d[i+2];
-      if(type==='warm'){ r=Math.min(255,r+15); g=Math.min(255,g+5); b=Math.max(0,b-10); }
-      else if(type==='bright'){ r=Math.min(255,r+25); g=Math.min(255,g+25); b=Math.min(255,b+25); }
-      else if(type==='sharp'){
-        // 简单锐化：增强对比
-        r = Math.min(255, r + (r-128)*0.2);
-        g = Math.min(255, g + (g-128)*0.2);
-        b = Math.min(255, b + (b-128)*0.2);
-      }
-      else if(type==='cool'){ r=Math.max(0,r-5); b=Math.min(255,b+15); g=Math.min(255,g+5); }
-      d[i]=r; d[i+1]=g; d[i+2]=b;
-    }
-    ctx.putImageData(data, 0, 0);
-    currentImage = canvas.toDataURL('image/jpeg',0.9);
-    setPreviewImg(currentImage);
+  var filters = {
+    none:'',
+    warm:'brightness(1.08) contrast(1.05) sepia(0.15) saturate(1.1) hue-rotate(-5deg)',
+    bright:'brightness(1.2) contrast(1.05) saturate(1.05)',
+    sharp:'contrast(1.15) saturate(1.1) brightness(1.02)',
+    cool:'brightness(1.05) contrast(1.05) saturate(0.9) hue-rotate(5deg)'
   };
-  img.src = src;
+  imgEl.style.filter = filters[type];
+  imgEl.style.transition = 'filter 0.3s';
+  if(imgEl2){ imgEl2.style.filter = filters[type]; imgEl2.style.transition = 'filter 0.3s'; }
 }
 
 function addTextOverlay(){
@@ -345,30 +328,29 @@ function addTextOverlay(){
   img.onload = function(){
     canvas.width = img.width; canvas.height = img.height;
     ctx.drawImage(img, 0, 0);
-    // 文字背景
-    var fontSize = Math.round(img.width * 0.06);
+    var fontSize = Math.round(img.width * 0.07);
     ctx.font = 'bold '+fontSize+'px "PingFang SC","Microsoft YaHei",sans-serif';
     var tw = ctx.measureText(text).width;
-    var th = fontSize + 16;
-    var tx = (canvas.width - tw) / 2;
-    var ty = canvas.height - th - 30;
-    // 半透明背景
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.roundRect(tx-16, ty-8, tw+32, th+16, 12);
-    ctx.fill();
-    // 白色文字
+    var ty = canvas.height - fontSize - 40;
+    // 渐变背景条
+    var grad = ctx.createLinearGradient(0,ty-16,0,ty+fontSize+8);
+    grad.addColorStop(0,'rgba(0,0,0,0)');
+    grad.addColorStop(0.5,'rgba(0,0,0,0.45)');
+    grad.addColorStop(1,'rgba(0,0,0,0.6)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, ty-16, canvas.width, fontSize+32);
+    // 文字
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
     ctx.fillText(text, canvas.width/2, ty + fontSize);
-    currentImage = canvas.toDataURL('image/jpeg',0.9);
+    currentImage = canvas.toDataURL('image/jpeg',0.92);
     setPreviewImg(currentImage);
   };
   img.src = src;
 }
 
 function setPreviewImg(src){
-  document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">'+(currentFilter!=='none'?'已调色':'')+'</div><img src="'+src+'">';
+  document.getElementById('imgResult').innerHTML = '<img src="'+src+'">';
   document.getElementById('mi').innerHTML = '<img src="'+src+'">';
 }
 
@@ -443,61 +425,104 @@ function generateCopy(scene, extra){
   var shop=document.getElementById('shopName').value.trim()||'我的美容店';
   var templates = {
     new: [
-      '姐妹们！'+(extra||'我们上新项目啦')+'🌸\n\n✨ '+(extra||'全新体验，效果超乎想象')+'\n📌 限时尝鲜价，仅限前20名\n📍'+shop+'\n💬 私信我预留名额～',
-      '🔥'+(extra||'新品到店！')+'\n\n做了这么多年美容，这次的新项目真的不一样。\n效果看得见，价格也很美丽💕\n\n📍地址：'+shop+'\n📱扫码预约👇',
-      '好物分享 | '+(extra||'店里新到的项目')+'\n\n试了一次就被圈粉了😍\n效果是真的好！推荐给姐妹们~\n\n💬 想了解的评论区扣1',
+      '姐妹们👋'+((extra?' '+extra+' 终于到店啦':' 店里来新朋友了'))+'\n\n用了一次就决定要长期做\n效果是真的好 忍不住分享💕\n\n📍'+shop+'\n💬 想试的私信 名额不多',
+      '被追问了一百遍的'+((extra||'新项目'))+' 终于安排上了\n\n说实话 做美容这么多年\n能让我这么有信心的产品不多\n但这次真的不一样\n\n📍'+shop+'\n📱扫码预约体验',
+      '📦 开箱时刻！\n'+(extra||'新到的产品，迫不及待想给姐妹们试试')+'\n\n做一行爱一行\n这么多年了还是热爱💕\n\n评论扣"1" 送一次免费体验👇',
+      '有姐妹问我 最近皮肤怎么这么好\n秘密就是这个 '+((extra||'新上的项目'))+'\n\n做了三次 毛孔细了 肤色亮了\n自信到可以不化妆出门✨\n\n📍'+shop+'\n💬 想知道是啥 私信我',
+      '悄悄说一个好消息🤫\n'+(extra||'我们上新了！第一波体验价超划算')+'\n\n第一批永远是福利最好的\n懂的自然懂\n\n📍'+shop+'\n⏰ 仅限前15名',
+      '一直有顾客问什么时候上这个\n今天终于到了！\n'+(extra||'盼了好久的新品')+'\n\n好东西值得等待\n姐妹们冲就完了👊\n\n📍'+shop,
+      '做了这么久美容师\n最大的感受就是：好产品会说话\n'+(extra||'这次的新品就是')+'\n\n试了一次就明白为什么它会火🔥\n\n📍'+shop+'\n💬 欢迎来体验',
+      '今天一整天都在试用新品\n同事都说皮肤比上个月好了\n（偷偷说 就是这个'+((extra||'新项目'))+'的功劳）\n\n📍'+shop+'\n💬 好奇的来问我',
     ],
     sale: [
-      '🎉限时福利！'+(extra||'超值优惠来啦')+'\n\n💆‍♀️ '+(extra||'指定项目立减100元')+'\n🗓 活动时间：即日起至月底\n👥 仅限20个名额\n\n手慢无！私信我预留～',
-      '姐妹们，这次的活动真的划算！\n'+(extra||'回馈老顾客，优惠力度空前')+'💕\n\n✨ 原价X，现价Y\n🎁 到店还送小礼物\n\n📍'+shop+'\n💬 私信我预留名额',
-      '年中大促🔥\n'+(extra||'所有项目8折起！')+'\n\n错过真的要等明年了😭\n趁现在囤一波，秋冬皮肤全靠现在保养\n\n📍'+shop+'\n💬 私信预约',
+      '真的好久没做活动了\n'+(extra||'这次力度我自己都心疼')+'\n\n但看到姐妹们的支持和信任\n觉得一切都值了💕\n\n📍'+shop+'\n💬 名额有限 私信预留',
+      '今天有顾客问我\n"老板 你这样做活动不亏吗"\n\n说实话——是有点心疼\n但看到姐妹们开心的样子 值了\n\n'+(extra||'活动真实有效')+'\n📍'+shop,
+      '不玩套路 不玩虚的\n'+((extra||'实实在在的优惠'))+'\n\n做美容这么多年\n靠的是回头客和口碑\n不是花里胡哨的噱头\n\n📍'+shop+'\n💬 私信了解详情',
+      '一位老顾客上次活动没赶上\n一直念叨\n这次特意通知：活动又来了！\n\n'+(extra||'这次错过真的要等很久')+'\n📍'+shop,
+      '我老公说"你怎么老做活动"\n我说——\n因为我自己也是女人\n知道变美有多不容易\n大家值得被善待\n\n'+((extra||'趁活动囤起来'))+'\n📍'+shop,
+      '算了一笔账\n'+(extra||'这次活动比平时省了不止一点')+'\n\n很多老顾客都是趁活动囤一堆\n闭眼入都不会错\n因为每次都用得完 每次都觉得值\n\n📍'+shop+'\n💬 私信我预留',
+      '看这天气就知道 又该保养了\n'+(extra||'趁现在有活动 赶紧安排上')+'\n\n聪明的女人懂得在对的时间\n做对的投资\n在保养这件事上 永远不亏\n\n📍'+shop,
     ],
     tips: [
-      '💡护肤小课堂 | '+(extra||'关于补水的那些事')+'\n\n很多人以为补水就是多敷面膜，其实不对❌\n真正的补水要从内到外：\n1️⃣ 多喝水\n2️⃣ 选对护肤品\n3️⃣ 定期做深层补水护理\n\n📍'+shop+'\n💆‍♀️ 来店里我帮你看看肤质～',
-      '今日分享✨ '+(extra||'换季护肤注意')+'\n\n换季皮肤容易敏感，记住这三点：\n① 不要频繁换护肤品\n② 做好防晒！防晒！防晒！\n③ 每周深层清洁一次\n\n📍'+shop+'\n有皮肤问题随时问我～',
-      '🌿 '+(extra||'秋季护肤要点')+'\n\n秋冬干燥，皮肤水分流失快\n除了日常护肤品\n建议每周做一次专业补水护理💧\n\n📍'+shop+'\n💬 私信了解补水项目',
+      '做了这么多年的脸 说点真心话\n'+(extra||'关于护肤 你想知道的都在这里')+'\n\n一：不要盲目跟风买护肤品\n二：适合自己的才是最好的\n三：定期做专业护理 比什么都管用\n\n📍'+shop+'\n有皮肤问题随时问我 免费的',
+      '经常有顾客问我\n"为什么我在家护理 效果不好"\n\n答案很简单：专业的人做专业的事\n就像你不会自己给自己做手术一样\n护理也是需要功夫的\n\n'+(extra||'来试试就知道了')+'\n📍'+shop,
+      '你是不是也有这样的困扰？\n'+(extra||'明明擦了护肤品 皮肤还是干')+'\n\n原因可能是：\n→ 角质层太厚 吸收不了\n→ 产品选错了\n→ 日常清洁不到位\n\n📍'+shop+'\n💬 私信我帮你看看肤质',
+      '讲个冷知识\n皮肤好不好 看这三点就够了：\n1️⃣ 水油平衡\n2️⃣ 毛孔状态\n3️⃣ 肤色均匀度\n\n很多人只关注补水\n但其实深层清洁和防晒更重要！\n\n'+(extra||'来店里做个免费检测')+'\n📍'+shop,
+      '今天不推销 纯科普\n'+(extra||'关于护肤常见的误区')+'\n\n❌ 敷面膜越久越好（错！15-20分钟）\n❌ 出油就不用保湿（错！缺水才出油）\n❌ 贵的就一定好（错！适合自己的才最好）\n\n还有疑问？来店里找我聊\n📍'+shop,
     ],
     review: [
-      '收到顾客的反馈，满满的感动💕\n\n'+(extra||'一位顾客做了三次护理后，皮肤状态好了很多，特意发微信感谢我')+'\n\n做美容这行，最开心的就是看到顾客变美的那一刻✨\n\n感谢信任，我们会继续努力💪',
-      '顾客说"老师，你手法真舒服"😊\n\n'+(extra||'做美容这么多年，听到这句话还是特别开心')+'\n\n用心服务每一位顾客，是我们一直坚持的事\n\n📍'+shop+'\n💆‍♀️ 新顾客到店有优惠哦～',
-      '🌺 今日份好评\n\n'+(extra||'一位阿姨做完面部护理说：感觉年轻了十岁')+'\n\n其实我们只是用心做好每一个细节\n美丽，值得认真对待💕\n\n📍'+shop,
+      '开店这么多年\n最欣慰的就是收到这样的反馈\n\n'+(extra||'顾客说"老师 我皮肤真的好了很多"')+'\n\n那种成就感 比什么都值\n做美容 不只是工作 更是信仰\n\n📍'+shop,
+      '大家看看我们的真实效果\n都是手机前置摄像头拍的\n没有任何P图\n\n'+(extra||'顾客自己都觉得不可思议')+'\n\n这就是我们坚持的理由\n\n📍'+shop,
+      '有时候会觉得累 想休息\n但看到顾客变美后的笑容\n又觉得—值得\n\n做这行 不是为了发财\n是为了帮更多姐妹找到自信\n\n'+(extra||'感谢每一位信任的顾客')+'\n\n📍'+shop,
+      '有顾客问我\n"你做了这么久会不会腻"\n\n说实话——不会\n因为每个顾客的状态不同 需求不同\n每一次都是新的挑战\n也每一次都能获得新的成就感\n\n'+(extra||'这就是手艺人')+'💪\n📍'+shop,
     ],
     festival: [
-      '🎊 '+(extra||'女王节快乐')+' 所有女生！\n\n在这个属于我们的节日里\n送自己一份美丽🌹\n\n💆‍♀️ 节日专属护理套餐\n🎁 到店即送精美礼品\n📍'+shop+'\n💬 私信预约',
-      '🌙 中秋快乐 | '+(extra||'月圆人更美')+'\n\n中秋佳节，团圆时刻\n别忘了也犒劳一下自己💕\n\n✨ 节日限定护理套餐上线\n📍'+shop+'\n💬 提前预约有惊喜',
-      '🏮 '+(extra||'国庆特惠')+'\n\n小长假，除了出去玩\n也可以来店里做个护理放松一下💆‍♀️\n\n📍'+shop+'\n💬 假期正常营业，私信预约哦',
+      '过节啦！给自己放个假\n也给皮肤放个假💆‍♀️\n\n'+(extra||'节日快乐 别忘了好好犒劳自己')+'\n\n女人什么时候最美？\n爱自己的时候✨\n\n📍'+shop,
+      '别人过节都是吃吃喝喝\n我们过节约个护理不香吗\n\n好好爱自己\n是给生活最好的礼物\n\n'+(extra||'节日快乐 姐妹们')+'🌸\n📍'+shop,
+      '越是节日 越要美美的\n因为今天你会见到很多人\n因为今天会有很多照片\n因为你今天值得被夸\n\n'+(extra||'节日特别推荐')+'\n📍'+shop,
+      '过节的意义是什么？\n是提醒我们——\n生活很辛苦 但也可以很美好\n\n给自己一个小奖励\n不为别的 就为这一年的努力\n\n'+(extra||'节日快乐')+'💕\n📍'+shop,
     ],
     daily: [
-      '☀️早安 | 元气满满的一天\n\n'+(extra||'今天阳光很好，店里的花也开了')+'\n新的一天，从爱自己开始💕\n\n📍'+shop+'\n💆‍♀️ 今天有位子，约吗？',
-      '🌙晚安 | 睡前分享\n\n'+(extra||'忙碌的一天结束了，敷个面膜犒劳自己')+'\n\n女人，一定要对自己好一点💕\n\n📍'+shop+'\n晚安，明天见～',
-      '📷 今日店内日常\n\n'+(extra||'打扫完毕，泡好花茶，等姐妹们来')+'\n用心准备，只为你来的时候舒服放松🌸\n\n📍'+shop+'\n💬 今天下午还有空位哦',
+      '刚收拾完店铺\n泡好茶 放好音乐\n安安静静的 等姐妹们来\n\n'+(extra||'这可能就是我喜欢的生活')+'\n\n📍'+shop+'\n💬 今天还有空位',
+      '今天的阳光真的太好了☀️\n照进店里 整个屋子都是暖的\n\n在这样的环境里做护理\n心情都会变好吧\n\n'+(extra||'】欢迎来坐坐')+'\n📍'+shop,
+      '做完美容 最好的状态就是：\n不想回家 只想在这里多待一会\n\n我们的顾客经常这么说😄\n因为这里不只是一个店\n更像一个闺蜜的客厅\n\n'+(extra||'有空来坐坐')+'\n📍'+shop,
+      '有人问我为什么不请人\n我说：顾客说就喜欢我的手法\n\n自己上阵虽然累\n但每一张脸都用心对待\n这是机器和技师做不到的\n\n'+(extra||'来自一个手艺人')+'✨\n📍'+shop,
+      '雨天 最适合做护理的日子\n外面淅淅沥沥\n里面暖暖的 香香的 静静的\n\n完美的午后时光\n'+(extra||'一个人也要好好爱自己')+'\n\n📍'+shop,
     ]
   };
   var pool = templates[scene] || templates.daily;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// AI配图异步加载 — 不阻塞，加载完成自动显示
+// AI配图 — 多样prompt+随机风格保证每次不同
 function loadAIImage(scene, extra, callback){
-  var prompts = {
-    new: 'elegant beauty skincare products, soft pink gold, clean minimal, professional beauty salon, product photography',
-    sale: 'luxury spa promotion sale, warm golden lighting, inviting beauty treatment, elegant, high quality',
-    tips: 'natural skincare fresh ingredients, rose petals aloe, clean white background, spa, healthy glowing skin',
-    review: 'happy woman glowing beautiful skin after facial treatment, warm smile, professional beauty salon',
-    festival: 'festive celebration beauty spa, elegant flowers decorations, warm inviting, golden, celebration mood',
-    daily: 'warm cozy beauty salon interior, fresh flowers tea set, morning sunlight, clean elegant, welcoming'
+  var styles = [
+    'soft natural lighting, professional product photography',
+    'warm golden hour lighting, elegant composition',
+    'bright clean studio lighting, minimalist aesthetic',
+    'cozy ambient lighting, lifestyle photography',
+    'dreamy bokeh background, luxury spa atmosphere',
+    'flat lay photography, neat arrangement',
+    'close-up macro shot, fine details texture',
+    'zen Japanese spa style, natural elements',
+    'modern Korean beauty aesthetic, pastel tones',
+    'European luxury salon style, marble texture'
+  ];
+  var palettes = [
+    'soft pink and cream tones',
+    'warm gold and white',
+    'fresh green and white',
+    'elegant rose gold',
+    'clean ivory and sage',
+    'lavender and pearl',
+    'peach and champagne'
+  ];
+  var subjects = {
+    new: ['beauty skincare product display','new facial treatment tools','luxury cosmetics arrangement','serum bottles with flowers'],
+    sale: ['spa promotion banner aesthetic','beauty discount offer elegant','gift set beauty package','beauty voucher card design'],
+    tips: ['natural ingredients skincare','aloe vera fresh leaves','rose water facial mist','organic herbs beauty','facial mask ingredients'],
+    review: ['glowing skin after facial','relaxed woman spa treatment','beauty results before after','happy customer skincare'],
+    festival: ['festive beauty celebration','holiday spa decorations','seasonal beauty gifts','special occasion skincare'],
+    daily: ['beauty salon interior cozy','spa room warm lighting','tea and flowers arrangement','clean towels skincare products']
   };
-  var prompt = (prompts[scene]||prompts.daily) + (extra?', '+extra:'');
-  var url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=400&height=400&nologo=true&seed=' + Date.now();
+  var subj = (subjects[scene]||subjects.daily);
+  // 每次随机组合：主体+风格+色调，保证结果不同
+  var prompt = subj[Math.floor(Math.random()*subj.length)] + ', ' +
+    styles[Math.floor(Math.random()*styles.length)] + ', ' +
+    palettes[Math.floor(Math.random()*palettes.length)] +
+    (extra ? ', ' + extra : '') +
+    ', no text, no watermark, high quality';
+  var seed = Math.floor(Math.random()*999999);
+  var url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) +
+    '?width=400&height=400&nologo=true&seed=' + seed;
   var img = new Image();
   img.onload = function(){ callback(url); };
   img.onerror = function(){
-    // 降级：渐变图片
     var colors = {new:'fce4ec,f8bbd0',sale:'fff3e0,ffe0b2',tips:'e8f5e9,c8e6c9',review:'f3e5f5,e1bee7',festival:'fff8e1,ffecb3',daily:'f5f0e8,e8d5c4'};
     var c = (colors[scene]||colors.daily).split(',');
-    var fallback = 'data:image/svg+xml,'+encodeURIComponent(
+    var fb = 'data:image/svg+xml,'+encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#'+c[0]+'"/><stop offset="100%" style="stop-color:#'+c[1]+'"/></linearGradient></defs><rect fill="url(#g)" width="400" height="400"/><text x="200" y="180" text-anchor="middle" font-size="100">🌸</text><text x="200" y="260" text-anchor="middle" font-size="22" fill="#666">'+sceneNames[scene]+'</text></svg>');
-    callback(fallback);
+    callback(fb);
   };
   img.src = url;
 }

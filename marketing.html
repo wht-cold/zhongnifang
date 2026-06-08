@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>中泥坊 · AI营销助手</title>
+<title>AI营销助手 · 朋友圈文案配图</title>
 <style>
 :root{--gold:#D4A574;--gold2:#B8895A;--pink:#f5ede4;--bg:#fdf9f5;--card:#fff;--t:#3C2A1E;--t2:#8B7355;--t3:#B0A090}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -97,6 +97,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   <div class="sub">一键生成朋友圈文案 & 配图</div>
 </div>
 
+<!-- 店铺名 -->
+<div class="input-area" style="margin-top:0">
+  <input id="shopName" placeholder="输入你的店铺名称" style="width:100%;padding:14px;border:1.5px solid #e8ddd2;border-radius:12px;font-size:15px;outline:none;background:var(--card)" value="">
+</div>
+
 <!-- 场景选择 -->
 <div class="scene-title">📌 选择推销场景</div>
 <div class="scenes" id="scenes">
@@ -126,7 +131,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
     <div class="pc-header">
       <div class="avatar" id="avatarIcon">🌸</div>
       <div>
-        <div style="font-weight:600;">中泥坊美容</div>
+        <div style="font-weight:600;" id="previewName">我的美容店</div>
         <div style="font-size:11px;color:var(--t3);">刚刚</div>
       </div>
     </div>
@@ -162,7 +167,7 @@ function pickScene(el, scene){
 
 // AI文案生成器 — 模板+智能组合
 function generateCopy(scene, extra){
-  var shop='中泥坊美容';
+  var shop=document.getElementById('shopName').value.trim()||'我的美容店';
   var templates = {
     new: [
       '姐妹们！'+(extra||'我们上新项目啦')+'🌸\n\n✨ '+(extra||'全新体验，效果超乎想象')+'\n📌 限时尝鲜价，仅限前20名\n📍'+shop+'\n💬 私信我预留名额～',
@@ -218,6 +223,8 @@ function generateImage(scene, extra){
 function generate(){
   var btn = document.getElementById('genBtn');
   var extra = document.getElementById('extraInput').value.trim();
+  var shopName = document.getElementById('shopName').value.trim() || '我的美容店';
+  document.getElementById('previewName').textContent = shopName;
   btn.disabled = true;
   btn.textContent = '⏳ 正在生成...';
   document.getElementById('result').style.display = 'block';
@@ -241,7 +248,7 @@ function generate(){
   };
   img.onerror = function(){
     // 降级：用占位图
-    var fallback = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="#f5ede4" width="600" height="400"/><text x="300" y="180" text-anchor="middle" font-size="80">🌸</text><text x="300" y="260" text-anchor="middle" font-size="20" fill="#B8895A">中泥坊美容</text><text x="300" y="300" text-anchor="middle" font-size="14" fill="#B0A090">AI配图 · ' + sceneNames[currentScene] + '</text></svg>');
+    var fallback = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="#f5ede4" width="600" height="400"/><text x="300" y="180" text-anchor="middle" font-size="80">🌸</text><text x="300" y="260" text-anchor="middle" font-size="20" fill="#B8895A">AI配图</text><text x="300" y="300" text-anchor="middle" font-size="14" fill="#B0A090">AI配图 · ' + sceneNames[currentScene] + '</text></svg>');
     document.getElementById('imgResult').innerHTML = '<img src="'+fallback+'" alt="配图">';
     document.getElementById('previewImg').innerHTML = '<img src="'+fallback+'" alt="配图" style="width:100%;display:block">';
     btn.disabled = false;

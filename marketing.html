@@ -387,28 +387,14 @@ function generate(){
   // 根据场景更新评论
   updateFakeComments(currentScene, shopName);
 
-  // 配图：有照片直接显示；没有则先显示模板→后台AI生成替换
+  // 配图：有照片秒出照片，没照片秒出模板
   if (uploadedPhoto) {
     document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">📸 商家实拍</div><img src="'+uploadedPhoto+'" alt="实拍">';
     document.getElementById('mi').innerHTML = '<img src="'+uploadedPhoto+'" alt="实拍">';
-    allDone();
   } else {
-    // 1. 先秒出模板
     var tplUrl = generateTemplateImg(currentScene);
-    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🎨 装饰图（AI正在生成…）</div><img src="'+tplUrl+'" alt="配图">';
+    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🎨 点击上方拍照按钮替换实拍图</div><img src="'+tplUrl+'" alt="配图">';
     document.getElementById('mi').innerHTML = '<img src="'+tplUrl+'" alt="配图">';
-    allDone();
-    // 2. 后台加载AI图，到了就替换
-    loadAIImage(currentScene, extra, function(aiUrl){
-      document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🤖 AI生成配图</div><img src="'+aiUrl+'" alt="AI配图">';
-      document.getElementById('mi').innerHTML = '<img src="'+aiUrl+'" alt="AI配图">';
-    });
-  }
-
-  function allDone(){
-    btn.disabled = false;
-    btn.textContent = '✨ 一键生成文案+配图';
-    document.getElementById('result').scrollIntoView({behavior:'smooth'});
   }
 
   btn.disabled = false;

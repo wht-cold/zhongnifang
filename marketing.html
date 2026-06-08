@@ -91,23 +91,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .img-box .loading{text-align:center;color:var(--t3);padding:40px}
 .img-box .loading .spinner{font-size:40px;animation:spin 1.5s linear infinite;display:block;margin-bottom:12px}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* 预览卡片 */
-.preview-card{
-  background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);
-  border:1px solid #eee
+/* 朋友圈卡片 - 完全仿真微信 */
+.moments-card{
+  background:#fff;border-radius:0;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);
+  font-size:15px
 }
-.preview-card .pc-header{
-  padding:12px 16px;display:flex;align-items:center;gap:10px;
-  border-bottom:1px solid #f0ebe4;font-size:14px;font-weight:500
+.moments-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:#ededed;border-bottom:1px solid #d9d9d9;
+  font-size:17px;font-weight:500;color:#000
 }
-.preview-card .pc-header .avatar{
-  width:40px;height:40px;border-radius:50%;background:var(--pink);
-  display:flex;align-items:center;justify-content:center;font-size:20px
+.moments-back{color:#000;font-size:20px}
+.moments-camera{font-size:20px}
+.moments-feed{display:flex;padding:14px 12px;gap:10px}
+.moments-avatar{
+  width:42px;height:42px;border-radius:6px;background:#e8d5c4;
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0
 }
-.preview-card .pc-body{padding:16px;font-size:15px;line-height:1.9;white-space:pre-wrap}
-.preview-card .pc-img{width:100%}
-.preview-card .pc-img img{width:100%;display:block}
-.preview-card .pc-footer{padding:12px 16px;font-size:12px;color:var(--t3);border-top:1px solid #f0ebe4}
+.moments-content{flex:1;min-width:0}
+.moments-name{font-weight:700;color:#576b95;font-size:15px;margin-bottom:4px}
+.moments-text{font-size:16px;line-height:1.7;color:#000;white-space:pre-wrap;margin-bottom:8px}
+.moments-images{margin-bottom:6px}
+.moments-images img{
+  width:100%;max-width:260px;border-radius:4px;display:block;object-fit:cover;max-height:300px
+}
+.moments-meta{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.moments-time{font-size:12px;color:#8c8c8c}
+.moments-actions{display:flex;gap:12px}
+.moments-action{font-size:12px;color:#8c8c8c;background:none;border:none;cursor:pointer;padding:4px 0}
+.moments-likes{
+  margin-top:6px;padding:6px 8px;background:#f7f7f7;border-radius:2px;
+  font-size:12px;color:#576b95
+}
+.moments-divider{height:8px;background:#f0f0f0}
 /* Toast */
 .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;padding:12px 24px;border-radius:10px;font-weight:500;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;background:#10b981;color:#fff}
 .toast.show{opacity:1}
@@ -161,20 +177,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 
 <!-- 结果区 -->
 <div class="result" id="result">
-  <!-- 预览卡片 -->
+  <!-- ====== 仿微信朋友圈预览 ====== -->
   <div class="section-label">📱 朋友圈预览效果</div>
-  <div class="preview-card">
-    <div class="pc-header">
-      <div class="avatar" id="avatarIcon">🌸</div>
-      <div>
-        <div style="font-weight:600;" id="previewName">我的美容店</div>
-        <div style="font-size:11px;color:var(--t3);">刚刚</div>
+  <div class="moments-card">
+    <!-- 顶栏 -->
+    <div class="moments-topbar">
+      <span class="moments-back">←</span>
+      <span class="moments-title">朋友圈</span>
+      <span class="moments-camera">📷</span>
+    </div>
+    <!-- 动态 -->
+    <div class="moments-feed">
+      <div class="moments-avatar" id="ma">🌸</div>
+      <div class="moments-content">
+        <div class="moments-name" id="mn">我的美容店</div>
+        <div class="moments-text" id="mt"></div>
+        <div class="moments-images" id="mi"></div>
+        <div class="moments-meta">
+          <span class="moments-time">刚刚</span>
+          <span class="moments-actions">
+            <span class="moments-action">💬 评论</span>
+            <span class="moments-action">❤️</span>
+          </span>
+        </div>
+        <!-- 点赞和评论模拟 -->
+        <div class="moments-likes">
+          <span>❤️</span> 3位好友觉得很赞
+        </div>
       </div>
     </div>
-    <div class="pc-body" id="previewText"></div>
-    <div class="pc-img" id="previewImg"></div>
-    <div class="pc-footer">❤️ 赞  💬 评论</div>
+    <!-- 分割线 -->
+    <div class="moments-divider"></div>
+    <div class="moments-feed" style="opacity:0.3">
+      <div class="moments-avatar">👩</div>
+      <div class="moments-content">
+        <div class="moments-name">顾客-李姐</div>
+        <div class="moments-text">刚去做了个护理，<br>效果真的太好了！<br>推荐给大家~🌸</div>
+        <div class="moments-meta"><span class="moments-time">1小时前</span></div>
+      </div>
+    </div>
   </div>
+
+  <!-- 操作区 -->
+  <div class="section-label" style="margin-top:20px;">📋 操作</div>
+  <div class="copy-box" id="textResult">
+    <button class="copy-btn" onclick="copyText()">📋 复制文案</button>
+  </div>
+  <div class="img-box" id="imgResult"></div>
+</div>
 
   <!-- 文案 -->
   <div class="section-label">📝 文案（点右上角复制）</div>
@@ -261,54 +311,77 @@ function generateCopy(scene, extra){
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// 即时配图模板 — 秒出
-function generateTemplateImg(scene){
-  var colors = {
-    new:    ['#fce4ec','#f8bbd0','🌸','新品上线'],
-    sale:   ['#fff3e0','#ffe0b2','🎉','限时优惠'],
-    tips:   ['#e8f5e9','#c8e6c9','💡','护肤知识'],
-    review: ['#f3e5f5','#e1bee7','💬','顾客好评'],
-    festival:['#fff8e1','#ffecb3','🎊','节日特惠'],
-    daily:  ['#f5f0e8','#e8d5c4','📷','日常营业']
+// AI配图异步加载 — 不阻塞，加载完成自动显示
+function loadAIImage(scene, extra, callback){
+  var prompts = {
+    new: 'elegant beauty skincare products, soft pink gold, clean minimal, professional beauty salon, product photography',
+    sale: 'luxury spa promotion sale, warm golden lighting, inviting beauty treatment, elegant, high quality',
+    tips: 'natural skincare fresh ingredients, rose petals aloe, clean white background, spa, healthy glowing skin',
+    review: 'happy woman glowing beautiful skin after facial treatment, warm smile, professional beauty salon',
+    festival: 'festive celebration beauty spa, elegant flowers decorations, warm inviting, golden, celebration mood',
+    daily: 'warm cozy beauty salon interior, fresh flowers tea set, morning sunlight, clean elegant, welcoming'
   };
-  var c = colors[scene] || colors.daily;
-  return 'data:image/svg+xml,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="500" viewBox="0 0 600 500">'+
-    '<defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:'+c[0]+'"/><stop offset="100%" style="stop-color:'+c[1]+'"/></linearGradient></defs>'+
-    '<rect fill="url(#g)" width="600" height="500"/>'+
-    '<text x="300" y="180" text-anchor="middle" font-size="120">'+c[2]+'</text>'+
-    '<text x="300" y="280" text-anchor="middle" font-size="28" fill="#555" font-weight="bold">'+c[3]+'</text>'+
-    '<text x="300" y="330" text-anchor="middle" font-size="16" fill="#999">中泥坊美容</text>'+
-    '<rect x="180" y="380" width="240" height="56" rx="28" fill="#fff" opacity="0.8"/>'+
-    '<text x="300" y="416" text-anchor="middle" font-size="18" fill="#888">📍 点击预约</text>'+
-    '</svg>'
-  );
+  var prompt = (prompts[scene]||prompts.daily) + (extra?', '+extra:'');
+  var url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=400&height=400&nologo=true&seed=' + Date.now();
+  var img = new Image();
+  img.onload = function(){ callback(url); };
+  img.onerror = function(){
+    // 降级：渐变图片
+    var colors = {new:'fce4ec,f8bbd0',sale:'fff3e0,ffe0b2',tips:'e8f5e9,c8e6c9',review:'f3e5f5,e1bee7',festival:'fff8e1,ffecb3',daily:'f5f0e8,e8d5c4'};
+    var c = (colors[scene]||colors.daily).split(',');
+    var fallback = 'data:image/svg+xml,'+encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#'+c[0]+'"/><stop offset="100%" style="stop-color:#'+c[1]+'"/></linearGradient></defs><rect fill="url(#g)" width="400" height="400"/><text x="200" y="180" text-anchor="middle" font-size="100">🌸</text><text x="200" y="260" text-anchor="middle" font-size="22" fill="#666">'+sceneNames[scene]+'</text></svg>');
+    callback(fallback);
+  };
+  img.src = url;
+}
+
+function generateTemplateImg(scene){
+  var colors = {new:'fce4ec,f8bbd0',sale:'fff3e0,ffe0b2',tips:'e8f5e9,c8e6c9',review:'f3e5f5,e1bee7',festival:'fff8e1,ffecb3',daily:'f5f0e8,e8d5c4'};
+  var c = (colors[scene]||colors.daily).split(',');
+  return 'data:image/svg+xml,'+encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#'+c[0]+'"/><stop offset="100%" style="stop-color:#'+c[1]+'"/></linearGradient></defs><rect fill="url(#g)" width="400" height="400"/><text x="200" y="180" text-anchor="middle" font-size="100">🌸</text><text x="200" y="260" text-anchor="middle" font-size="22" fill="#666">'+sceneNames[scene]+'</text></svg>');
 }
 
 function generate(){
   var btn = document.getElementById('genBtn');
   var extra = document.getElementById('extraInput').value.trim();
   var shopName = document.getElementById('shopName').value.trim() || '我的美容店';
-  document.getElementById('previewName').textContent = shopName;
+  document.getElementById('mn').textContent = shopName;
+  document.getElementById('ma').textContent = shopName[0] || '🌸';
   btn.disabled = true;
   btn.textContent = '⏳ 正在生成...';
   document.getElementById('result').style.display = 'block';
   document.getElementById('imgResult').innerHTML = '<div class="loading"><span class="spinner">🎨</span>AI正在生成配图...</div>';
-  document.getElementById('previewImg').innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);">🎨 AI配图生成中...</div>';
+  document.getElementById('mi').innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:13px;">🎨 AI配图生成中...</div>';
 
   // 生成文案
   var copy = generateCopy(currentScene, extra);
   document.getElementById('textResult').innerHTML = '<button class="copy-btn" onclick="copyText()">📋 复制文案</button>' + copy.replace(/\n/g,'<br>');
-  document.getElementById('previewText').innerHTML = copy.replace(/\n/g,'<br>');
+  document.getElementById('mt').innerHTML = copy.replace(/\n/g,'<br>');
 
-  // 配图：有照片用照片，没有用模板（秒出）
+  // 配图：有照片直接显示；没有则先显示模板→后台AI生成替换
   if (uploadedPhoto) {
-    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">📸 商家实拍照片</div><img src="'+uploadedPhoto+'" alt="实拍照片">';
-    document.getElementById('previewImg').innerHTML = '<img src="'+uploadedPhoto+'" alt="实拍照片" style="width:100%;display:block">';
+    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">📸 商家实拍</div><img src="'+uploadedPhoto+'" alt="实拍">';
+    document.getElementById('mi').innerHTML = '<img src="'+uploadedPhoto+'" alt="实拍">';
+    allDone();
   } else {
-    var tplImg = generateTemplateImg(currentScene);
-    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🎨 装饰卡片 · 建议拍照替换</div><img src="'+tplImg+'" alt="装饰图">';
-    document.getElementById('previewImg').innerHTML = '<img src="'+tplImg+'" alt="装饰图" style="width:100%;display:block">';
+    // 1. 先秒出模板
+    var tplUrl = generateTemplateImg(currentScene);
+    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🎨 装饰图（AI正在生成…）</div><img src="'+tplUrl+'" alt="配图">';
+    document.getElementById('mi').innerHTML = '<img src="'+tplUrl+'" alt="配图">';
+    allDone();
+    // 2. 后台加载AI图，到了就替换
+    loadAIImage(currentScene, extra, function(aiUrl){
+      document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🤖 AI生成配图</div><img src="'+aiUrl+'" alt="AI配图">';
+      document.getElementById('mi').innerHTML = '<img src="'+aiUrl+'" alt="AI配图">';
+    });
+  }
+
+  function allDone(){
+    btn.disabled = false;
+    btn.textContent = '✨ 一键生成文案+配图';
+    document.getElementById('result').scrollIntoView({behavior:'smooth'});
   }
 
   btn.disabled = false;

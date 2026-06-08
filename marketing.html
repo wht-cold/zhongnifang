@@ -120,9 +120,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .moments-actions{display:flex;gap:12px}
 .moments-action{font-size:12px;color:#8c8c8c;background:none;border:none;cursor:pointer;padding:4px 0}
 .moments-likes{
-  margin-top:6px;padding:6px 8px;background:#f7f7f7;border-radius:2px;
-  font-size:12px;color:#576b95
+  margin-top:6px;padding:4px 8px 4px 6px;background:#f7f7f7;
+  font-size:13px;color:#576b95;display:flex;align-items:flex-start;gap:4px
 }
+.m-like-icon{color:#e04040;flex-shrink:0;margin-top:1px}
+.moments-comments{margin-top:0;background:#f7f7f7;padding:0 8px 6px 8px}
+.mcomment{font-size:13px;line-height:1.7;padding:2px 0;color:#222}
+.mc-name{color:#576b95;font-weight:500}
 .moments-divider{height:8px;background:#f0f0f0}
 /* Toast */
 .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;padding:12px 24px;border-radius:10px;font-weight:500;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;background:#10b981;color:#fff}
@@ -200,9 +204,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
             <span class="moments-action">❤️</span>
           </span>
         </div>
-        <!-- 点赞和评论模拟 -->
-        <div class="moments-likes">
-          <span>❤️</span> 3位好友觉得很赞
+        <!-- 点赞 -->
+        <div class="moments-likes" id="mlikes">
+          <span class="m-like-icon">❤️</span>
+          <span id="mlikeNames">王姐, 刘阿姨, 美容顾问-小陈</span>
+        </div>
+        <!-- 评论 -->
+        <div class="moments-comments" id="mcomments">
+          <div class="mcomment"><span class="mc-name">王姐</span>：怎么预约呀？我想下午过来</div>
+          <div class="mcomment"><span class="mc-name" id="mreplyName">我的美容店</span> 回复 <span class="mc-name">王姐</span>：姐，私信我帮你留位子~😊</div>
+          <div class="mcomment"><span class="mc-name">刘阿姨</span>：上次做的补水效果特别好！</div>
+          <div class="mcomment"><span class="mc-name">美容顾问-小陈</span>：新品真的不错👍</div>
         </div>
       </div>
     </div>
@@ -263,6 +275,27 @@ function pickScene(el, scene){
 }
 
 // AI文案生成器 — 模板+智能组合
+function updateFakeComments(scene, shop){
+  var likes = {new:['王姐','刘阿姨','美容师-小陈'],sale:['李阿姨','张姐','赵姐','钱姐'],tips:['王姐','美容达人-丽丽'],review:['刘阿姨','张姐','周姐','王姐'],festival:['李姐','赵阿姨','钱姐','孙姐','王姐'],daily:['王姐','刘阿姨']};
+  var comments = {
+    new: [{n:'王姐',t:'这个新项目看起来不错！怎么预约？'},{n:'刘阿姨',t:'多少钱呀？我想试试'},{n:'美容师-小陈',t:'这个真的很好，我试用过了👍'}],
+    sale: [{n:'李阿姨',t:'给我留一个名额！下午过来'},{n:'张姐',t:'活动到什么时候？'},{n:'赵姐',t:'太划算了，我明天带朋友来'}],
+    tips: [{n:'王姐',t:'学到了！怪不得我皮肤最近干'},{n:'美容达人-丽丽',t:'老师说得对，补水真的很重要'}],
+    review: [{n:'刘阿姨',t:'我也是在这做的！效果确实好'},{n:'张姐',t:'下次给我也安排上'},{n:'周姐',t:'周末还有位置吗？'}],
+    festival: [{n:'李姐',t:'节日快乐！明天过来做个护理'},{n:'赵阿姨',t:'有没有节日优惠？'}],
+    daily: [{n:'王姐',t:'今天下午还有位子吗？'}]
+  };
+  var lks = likes[scene]||likes.daily;
+  var cms = comments[scene]||comments.daily;
+  document.getElementById('mlikeNames').textContent = lks.join(', ');
+  var h = '';
+  cms.forEach(function(c,i){
+    h += '<div class="mcomment"><span class="mc-name">'+c.n+'</span>：'+c.t+'</div>';
+    if(i===0){h += '<div class="mcomment"><span class="mc-name">'+shop+'</span> 回复 <span class="mc-name">'+c.n+'</span>：私信我帮您预留哦~😊</div>';}
+  });
+  document.getElementById('mcomments').innerHTML = h;
+}
+
 function generateCopy(scene, extra){
   var shop=document.getElementById('shopName').value.trim()||'我的美容店';
   var templates = {
@@ -349,6 +382,10 @@ function generate(){
   var copy = generateCopy(currentScene, extra);
   document.getElementById('textResult').innerHTML = '<button class="copy-btn" onclick="copyText()">📋 复制文案</button>' + copy.replace(/\n/g,'<br>');
   document.getElementById('mt').innerHTML = copy.replace(/\n/g,'<br>');
+  // 更新评论回复里的店名
+  document.getElementById('mreplyName').textContent = shopName;
+  // 根据场景更新评论
+  updateFakeComments(currentScene, shopName);
 
   // 配图：有照片直接显示；没有则先显示模板→后台AI生成替换
   if (uploadedPhoto) {

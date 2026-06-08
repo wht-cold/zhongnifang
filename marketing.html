@@ -259,14 +259,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
     <button class="filter-btn" onclick="applyFilter('sharp',this)"><span class="fi">✨</span>锐化</button>
     <button class="filter-btn" onclick="applyFilter('cool',this)"><span class="fi">❄️</span>冷白</button>
   </div>
-  <div class="text-overlay-row">
-    <input id="overlayText" placeholder="添加文字到图片上（如：限时优惠¥198）">
-    <button class="btn-sm btn-o" onclick="addTextOverlay()" style="flex-shrink:0">叠加</button>
+  <!-- 文字叠加（多层） -->
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <input id="overlayText" placeholder="输入文字添加到图片" style="flex:1;padding:10px 12px;border:1.5px solid #e8ddd2;border-radius:10px;font-size:13px;outline:none;background:#fff">
+    <select id="overlayPos" style="padding:10px;border:1.5px solid #e8ddd2;border-radius:10px;font-size:13px;background:#fff;width:70px">
+      <option value="bottom">底部</option><option value="middle">中间</option><option value="top">顶部</option>
+    </select>
+    <button class="btn-sm btn-o" onclick="addTextOverlay()" style="flex-shrink:0">添加</button>
   </div>
+  <!-- 已添加的文字层 -->
+  <div id="textLayers" style="margin-top:8px"></div>
 
   <!-- AI生图 -->
   <button class="ai-gen-btn" id="aiGenBtn" onclick="triggerAIImage()">
-    🤖 不满意？AI帮你生成一张新配图
+    🤖 AI生成配图（可多次生成，每次不同）
   </button>
 </div>
 
@@ -315,12 +321,56 @@ function applyFilter(type, btn){
   if(imgEl2){ imgEl2.style.filter = filters[type]; imgEl2.style.transition = 'filter 0.3s'; }
 }
 
+var textLayers = []; // {text, pos: 'bottom'|'middle'|'top'}
+
 function addTextOverlay(){
   var text = document.getElementById('overlayText').value.trim();
   if(!text) return;
+  var pos = document.getElementById('overlayPos').value;
+  textLayers.push({text:text, pos:pos});
+  document.getElementById('overlayText').value = '';
+  renderTextLayers();
+  renderAllOverlays();
+}
+
+function editLayer(i){
+  var layer = textLayers[i];
+  document.getElementById('overlayText').value = layer.text;
+  document.getElementById('overlayPos').value = layer.pos;
+  textLayers.splice(i, 1);
+  renderTextLayers();
+  renderAllOverlays();
+}
+
+function deleteLayer(i){
+  textLayers.splice(i, 1);
+  renderTextLayers();
+  renderAllOverlays();
+}
+
+function renderTextLayers(){
+  var h = '';
+  textLayers.forEach(function(l,i){
+    var posLabel = {bottom:'底部',middle:'中间',top:'顶部'}[l.pos];
+    h += '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#f8f4f0;border-radius:8px;margin-bottom:4px;font-size:12px;">'+
+      '<span style="flex:1;">📝 '+escHtml(l.text)+' <span style="color:var(--t3);">('+posLabel+')</span></span>'+
+      '<button onclick="editLayer('+i+')" style="border:none;background:none;font-size:14px;cursor:pointer;padding:2px 6px;">✏️</button>'+
+      '<button onclick="deleteLayer('+i+')" style="border:none;background:none;font-size:14px;cursor:pointer;padding:2px 6px;">🗑️</button></div>';
+  });
+  document.getElementById('textLayers').innerHTML = h;
+}
+
+function renderAllOverlays(){
   var imgEl = document.getElementById('mi').querySelector('img');
   var src = imgEl ? imgEl.src : (currentImage || uploadedPhoto);
-  if(!src || src.startsWith('data:image/svg')) return;
+  if(!src) return;
+
+  // 如果没有文字层，直接显示原图
+  if(textLayers.length === 0){
+    currentImage = src;
+    setPreviewImg(src);
+    return;
+  }
 
   var canvas = document.createElement('canvas');
   var ctx = canvas.getContext('2d');
@@ -330,31 +380,40 @@ function addTextOverlay(){
     var w = img.width, h = img.height;
     canvas.width = w; canvas.height = h;
     ctx.drawImage(img, 0, 0);
-    // 文字样式
-    var fs = Math.round(w * 0.06);
-    ctx.font = 'bold '+fs+'px "PingFang SC","Microsoft YaHei",sans-serif';
-    // 底部丝带效果
-    var ribbonH = fs + 28;
-    var ribbonY = h - ribbonH - 10;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, ribbonY, w, ribbonH);
-    // 装饰线
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(20, ribbonY + 3); ctx.lineTo(w-20, ribbonY + 3);
-    ctx.stroke();
-    // 白色文字居中
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, w/2, ribbonY + ribbonH/2);
+
+    textLayers.forEach(function(l){
+      var fs = Math.round(w * 0.06);
+      ctx.font = 'bold '+fs+'px "PingFang SC","Microsoft YaHei",sans-serif';
+      var ribbonH = fs + 28;
+      var ribbonY;
+      if(l.pos === 'top') ribbonY = 10;
+      else if(l.pos === 'middle') ribbonY = (h - ribbonH) / 2;
+      else ribbonY = h - ribbonH - 10;
+
+      // 半透明黑底
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, ribbonY, w, ribbonH);
+      // 装饰线
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(20, ribbonY + 3); ctx.lineTo(w - 20, ribbonY + 3);
+      ctx.stroke();
+      // 白色文字
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(l.text, w/2, ribbonY + ribbonH/2);
+    });
+
     currentImage = canvas.toDataURL('image/jpeg',0.92);
     setPreviewImg(currentImage);
   };
-  img.onerror = function(){ alert('图片加载失败，请重试'); };
+  img.onerror = function(){ alert('图片加载失败'); };
   img.src = src;
 }
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function setPreviewImg(src){
   document.getElementById('imgResult').innerHTML = '<img src="'+src+'">';
@@ -581,6 +640,7 @@ function generate(){
   document.getElementById('ma').textContent = shopName[0] || '🌸';
   btn.disabled = true;
   btn.textContent = '⏳ 正在生成...';
+  textLayers = []; renderTextLayers();
   document.getElementById('result').style.display = 'block';
   document.getElementById('imgResult').innerHTML = '<div class="loading"><span class="spinner">🎨</span>AI正在生成配图...</div>';
   document.getElementById('mi').innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:13px;">🎨 AI配图生成中...</div>';

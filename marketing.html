@@ -623,7 +623,6 @@ function getFallback(scene){
   return 'data:image/svg+xml,'+encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#'+c[0]+'"/><stop offset="100%" style="stop-color:#'+c[1]+'"/></linearGradient></defs><rect fill="url(#g)" width="400" height="400"/><text x="200" y="180" text-anchor="middle" font-size="100">'+emoji+'</text><text x="200" y="260" text-anchor="middle" font-size="22" fill="#666">AI配图加载失败</text><text x="200" y="300" text-anchor="middle" font-size="14" fill="#999">建议拍照或用模板图</text></svg>');
 }
-}
 
 function generateTemplateImg(scene){
   var colors = {new:'fce4ec,f8bbd0',sale:'fff3e0,ffe0b2',tips:'e8f5e9,c8e6c9',review:'f3e5f5,e1bee7',festival:'fff8e1,ffecb3',daily:'f5f0e8,e8d5c4'};

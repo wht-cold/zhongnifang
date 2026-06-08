@@ -82,6 +82,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   background:#fff;cursor:pointer;font-size:13px;color:var(--t2);transition:.2s
 }
 .img-toggle button.active{border-color:var(--gold);background:var(--pink);color:var(--gold2)}
+/* 滤镜按钮 */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.filter-btn{
+  padding:8px 12px;border:1.5px solid #e8ddd2;border-radius:20px;background:#fff;
+  font-size:12px;cursor:pointer;transition:.2s;white-space:nowrap;color:var(--t2)
+}
+.filter-btn:active,.filter-btn.active{border-color:var(--gold);background:var(--pink);color:var(--gold2)}
+.filter-btn .fi{font-size:16px;display:block;text-align:center}
+/* AI生图按钮 */
+.ai-gen-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px;border:2px dashed #e8ddd2;border-radius:12px;background:#fff;
+  cursor:pointer;font-size:14px;color:var(--t2);margin-top:10px;transition:.2s
+}
+.ai-gen-btn:hover{border-color:var(--gold);background:var(--pink)}
+.ai-gen-btn.loading{border-color:var(--gold);background:var(--pink);color:var(--gold2)}
+/* 文字叠加 */
+.text-overlay-row{display:flex;gap:8px;margin-top:10px}
+.text-overlay-row input{
+  flex:1;padding:10px 14px;border:1.5px solid #e8ddd2;border-radius:10px;
+  font-size:14px;outline:none;background:#fff
+}
+.text-overlay-row input:focus{border-color:var(--gold)}
 .img-box{
   background:var(--card);border-radius:14px;overflow:hidden;border:1px solid #eee;
   min-height:200px;display:flex;align-items:center;justify-content:center;
@@ -226,6 +249,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
     <button class="copy-btn" onclick="copyText()">📋 复制文案</button>
   </div>
   <div class="img-box" id="imgResult"></div>
+
+  <!-- 智能调图 -->
+  <div class="section-label" style="margin-top:12px;">🎨 智能调图</div>
+  <div class="filter-row" id="filterRow">
+    <button class="filter-btn active" onclick="applyFilter('none',this)" data-f="none"><span class="fi">📷</span>原图</button>
+    <button class="filter-btn" onclick="applyFilter('warm',this)"><span class="fi">🌅</span>暖色调</button>
+    <button class="filter-btn" onclick="applyFilter('bright',this)"><span class="fi">☀️</span>提亮</button>
+    <button class="filter-btn" onclick="applyFilter('sharp',this)"><span class="fi">✨</span>锐化</button>
+    <button class="filter-btn" onclick="applyFilter('cool',this)"><span class="fi">❄️</span>冷白</button>
+  </div>
+  <div class="text-overlay-row">
+    <input id="overlayText" placeholder="添加文字到图片上（如：限时优惠¥198）">
+    <button class="btn-sm btn-o" onclick="addTextOverlay()" style="flex-shrink:0">叠加</button>
+  </div>
+
+  <!-- AI生图 -->
+  <button class="ai-gen-btn" id="aiGenBtn" onclick="triggerAIImage()">
+    🤖 不满意？AI帮你生成一张新配图
+  </button>
 </div>
 
   <!-- 文案 -->
@@ -246,7 +288,108 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 <script>
 var currentScene = 'new';
 var uploadedPhoto = null;
+var currentImage = null;  // 当前显示的图片（原图或处理后）
+var currentFilter = 'none';
 var sceneNames = {new:'新品上线',sale:'限时优惠',tips:'护肤知识',review:'顾客好评',festival:'节日营销',daily:'日常营业'};
+
+// ── 智能调图 ──
+function applyFilter(type, btn){
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  if(btn) btn.classList.add('active');
+
+  var src = uploadedPhoto || document.getElementById('mi').querySelector('img')?.src;
+  if(!src || src.startsWith('data:image/svg')) return;
+
+  if(type === 'none'){ currentImage = src; setPreviewImg(src); return; }
+
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function(){
+    canvas.width = img.width; canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var d = data.data;
+    for(var i=0; i<d.length; i+=4){
+      var r=d[i], g=d[i+1], b=d[i+2];
+      if(type==='warm'){ r=Math.min(255,r+15); g=Math.min(255,g+5); b=Math.max(0,b-10); }
+      else if(type==='bright'){ r=Math.min(255,r+25); g=Math.min(255,g+25); b=Math.min(255,b+25); }
+      else if(type==='sharp'){
+        // 简单锐化：增强对比
+        r = Math.min(255, r + (r-128)*0.2);
+        g = Math.min(255, g + (g-128)*0.2);
+        b = Math.min(255, b + (b-128)*0.2);
+      }
+      else if(type==='cool'){ r=Math.max(0,r-5); b=Math.min(255,b+15); g=Math.min(255,g+5); }
+      d[i]=r; d[i+1]=g; d[i+2]=b;
+    }
+    ctx.putImageData(data, 0, 0);
+    currentImage = canvas.toDataURL('image/jpeg',0.9);
+    setPreviewImg(currentImage);
+  };
+  img.src = src;
+}
+
+function addTextOverlay(){
+  var text = document.getElementById('overlayText').value.trim();
+  if(!text) return;
+  var src = currentImage || uploadedPhoto || document.getElementById('mi').querySelector('img')?.src;
+  if(!src) return;
+
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function(){
+    canvas.width = img.width; canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    // 文字背景
+    var fontSize = Math.round(img.width * 0.06);
+    ctx.font = 'bold '+fontSize+'px "PingFang SC","Microsoft YaHei",sans-serif';
+    var tw = ctx.measureText(text).width;
+    var th = fontSize + 16;
+    var tx = (canvas.width - tw) / 2;
+    var ty = canvas.height - th - 30;
+    // 半透明背景
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.roundRect(tx-16, ty-8, tw+32, th+16, 12);
+    ctx.fill();
+    // 白色文字
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, canvas.width/2, ty + fontSize);
+    currentImage = canvas.toDataURL('image/jpeg',0.9);
+    setPreviewImg(currentImage);
+  };
+  img.src = src;
+}
+
+function setPreviewImg(src){
+  document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">'+(currentFilter!=='none'?'已调色':'')+'</div><img src="'+src+'">';
+  document.getElementById('mi').innerHTML = '<img src="'+src+'">';
+}
+
+// ── AI生图（手动触发） ──
+function triggerAIImage(){
+  var btn = document.getElementById('aiGenBtn');
+  var extra = document.getElementById('extraInput').value.trim();
+  btn.classList.add('loading');
+  btn.innerHTML = '⏳ AI正在生成配图...';
+
+  loadAIImage(currentScene, extra, function(aiUrl){
+    currentImage = aiUrl;
+    uploadedPhoto = null; // 用AI图替换
+    currentFilter = 'none';
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+    document.querySelector('.filter-btn[data-f="none"]').classList.add('active');
+    setPreviewImg(aiUrl);
+    btn.classList.remove('loading');
+    btn.innerHTML = '🤖 不满意？AI帮你生成一张新配图';
+  });
+}
 
 function handlePhoto(e){
   var file = e.target.files[0];
@@ -389,12 +532,14 @@ function generate(){
 
   // 配图：有照片秒出照片，没照片秒出模板
   if (uploadedPhoto) {
-    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">📸 商家实拍</div><img src="'+uploadedPhoto+'" alt="实拍">';
-    document.getElementById('mi').innerHTML = '<img src="'+uploadedPhoto+'" alt="实拍">';
+    currentImage = uploadedPhoto;
+    currentFilter = 'none';
+    setPreviewImg(uploadedPhoto);
   } else {
     var tplUrl = generateTemplateImg(currentScene);
-    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🎨 点击上方拍照按钮替换实拍图</div><img src="'+tplUrl+'" alt="配图">';
-    document.getElementById('mi').innerHTML = '<img src="'+tplUrl+'" alt="配图">';
+    currentImage = tplUrl;
+    currentFilter = 'none';
+    setPreviewImg(tplUrl);
   }
 
   btn.disabled = false;

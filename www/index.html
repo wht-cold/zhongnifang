@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- PWA 设置 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#D4A574">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="中泥坊美容">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>中泥坊美容</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --primary: #D4A574; --primary-dark: #B8895A; --primary-light: #F5EDE4;
+  --bg: #f8f4f0; --bg-white: #fff; --text: #3C2A1E; --text-light: #8B7355; --text-lighter: #B0A090;
+  --success: #7CB342; --danger: #D4786E; --radius: 16rpx;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f0ebe4; color: var(--text); display: flex; justify-content: center;
+  min-height: 100vh; line-height: 1.5;
+}
+.app {
+  width: 100%; max-width: 450px; min-height: 100vh; background: var(--bg);
+  display: flex; flex-direction: column; position: relative; padding-bottom: 110px;
+}
+
+/* 顶栏 */
+.header {
+  background: linear-gradient(135deg, #D4A574, #C4946A);
+  color: #fff; padding: 32px 20px 24px; text-align: center;
+}
+.header h1 { font-size: 22px; font-weight: 600; letter-spacing: 2px; }
+.header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+
+/* 公共卡片 */
+.card { background: var(--bg-white); margin: 12px 16px; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.section-title { font-size: 17px; font-weight: 600; margin-bottom: 16px; color: var(--primary-dark); }
+
+/* 按钮 */
+.btn-primary {
+  display: block; background: var(--primary); color: #fff; border: none;
+  padding: 14px 24px; border-radius: 12px; font-size: 16px; font-weight: 500;
+  text-align: center; cursor: pointer; width: 100%; transition: opacity 0.2s;
+}
+.btn-primary:active { opacity: 0.8; }
+.btn-primary:disabled { background: #ccc; }
+.btn-outline {
+  display: block; background: #fff; color: var(--primary); border: 2px solid var(--primary);
+  padding: 14px 24px; border-radius: 12px; font-size: 16px; text-align: center; cursor: pointer;
+}
+
+/* 底部导航 */
+.tab-bar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 450px; background: #fff; display: flex;
+  border-top: 1px solid #eee; z-index: 100; padding-bottom: env(safe-area-inset-bottom);
+}
+.tab-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0 6px; cursor: pointer; color: #999; font-size: 11px;
+  transition: color 0.2s; user-select: none;
+}
+.tab-item.active { color: var(--primary); }
+.tab-icon { font-size: 22px; margin-bottom: 2px; }
+
+/* 内容区 */
+.tab-content { display: none; flex: 1; padding-top: 4px; }
+.tab-content.active { display: block; }
+
+/* 首页 */
+.banner {
+  margin: 12px 16px; border-radius: 16px; overflow: hidden;
+  height: 180px; background: linear-gradient(135deg, #f5ede4 0%, #e8d5c4 50%, #d4a574 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.banner-text { text-align: center; color: #fff; }
+.banner-text .big { font-size: 48px; }
+.banner-text .sub { font-size: 14px; margin-top: 8px; opacity: 0.9; }
+.info-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.info-item { flex: 1; min-width: calc(50% - 6px); background: var(--bg); border-radius: 12px; padding: 14px; text-align: center; }
+.info-item .icon { font-size: 26px; margin-bottom: 6px; }
+.info-item .label { font-size: 12px; color: var(--text-light); }
+.info-item .val { font-size: 15px; font-weight: 500; margin-top: 4px; }
+
+/* 日期选择 */
+.date-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 8px; }
+.date-chip {
+  min-width: 80px; padding: 14px 10px; text-align: center; border-radius: 12px;
+  background: var(--bg); border: 2px solid transparent; cursor: pointer; flex-shrink: 0;
+  transition: all 0.2s; user-select: none;
+}
+.date-chip .w { font-size: 12px; color: var(--text-light); }
+.date-chip .d { font-size: 28px; font-weight: 600; }
+.date-chip.active { border-color: var(--primary); background: var(--primary-light); }
+
+/* 时段网格 */
+.time-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.time-cell {
+  width: calc(25% - 7.5px); padding: 14px 4px; text-align: center; border-radius: 10px;
+  background: var(--bg); border: 2px solid transparent; cursor: pointer; font-size: 14px;
+  position: relative; transition: all 0.2s; user-select: none;
+}
+.time-cell.booked { background: #f5f0f0; opacity: 0.4; pointer-events: none; }
+.time-cell.selected { border-color: var(--primary); background: var(--primary-light); font-weight: 600; }
+.time-cell .check {
+  position: absolute; top: 2px; right: 6px; font-size: 12px; color: var(--primary); font-weight: 700;
+}
+.time-cell .remain { font-size: 10px; color: var(--text-lighter); display: block; }
+
+/* 表单 */
+.form-group { margin-bottom: 18px; }
+.form-label { font-size: 15px; color: var(--text); margin-bottom: 8px; font-weight: 500; }
+.input {
+  width: 100%; padding: 12px 14px; border: 1px solid #e0ddd8; border-radius: 10px;
+  font-size: 15px; background: var(--bg); outline: none; transition: border 0.2s;
+}
+.input:focus { border-color: var(--primary); }
+textarea.input { height: 80px; resize: vertical; font-family: inherit; }
+select.input { appearance: none; }
+
+/* 成功页 */
+.success-block { text-align: center; padding: 40px 20px; }
+.success-block .icon { font-size: 64px; margin-bottom: 20px; }
+.success-block h2 { color: var(--success); margin-bottom: 12px; }
+
+/* 步骤条 */
+.steps { display: flex; align-items: center; justify-content: center; padding: 20px 0; }
+.step-dot { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #ccc; }
+.step-dot.on { color: var(--primary); }
+.step-circle {
+  width: 36px; height: 36px; border-radius: 50%; background: #e0ddd8; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  font-weight: 600; margin-bottom: 4px;
+}
+.step-dot.on .step-circle { background: var(--primary); }
+.step-line { width: 60px; height: 2px; background: #e0ddd8; margin: 0 8px 20px; }
+.step-line.on { background: var(--primary); }
+
+/* 标签 */
+.tag {
+  display: inline-block; padding: 6px 14px; border-radius: 20px;
+  font-size: 13px; font-weight: 500; margin: 4px 6px;
+}
+.tag-gold { background: var(--primary-light); color: var(--primary-dark); }
+.tag-green { background: #e8f5e9; color: #388e3c; }
+.tag-red { background: #fce4e4; color: #c62828; }
+.tag-blue { background: #e3f2fd; color: #1565c0; }
+
+/* 预约卡 */
+.booking-mini {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 0; border-bottom: 1px solid #f0ebe4;
+}
+.booking-mini:last-child { border-bottom: none; }
+
+/* 空状态 */
+.empty { text-align: center; padding: 40px; color: var(--text-lighter); }
+.empty .icon { font-size: 48px; margin-bottom: 12px; }
+
+/* 弹窗 */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px;
+  max-height: 80vh; overflow-y: auto;
+}
+.modal h3 { margin-bottom: 16px; font-size: 18px; }
+
+/* 管理表格 */
+.admin-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.admin-table th, .admin-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #eee; }
+.admin-table th { font-weight: 500; color: var(--text-light); font-size: 12px; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper button {
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--primary);
+  background: #fff; color: var(--primary); font-size: 14px; cursor: pointer; line-height: 1;
+}
+.stepper span { min-width: 18px; text-align: center; font-weight: 500; }
+.toggle-btn {
+  padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; border: none;
+  transition: all 0.2s;
+}
+.toggle-btn.on { background: #e8f5e9; color: #388e3c; }
+.toggle-btn.off { background: #fce4e4; color: #c62828; }
+
+/* 成功页标签 */
+.time-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0; }
+
+/* 提示 */
+.hint { text-align: center; font-size: 13px; color: var(--primary); padding: 8px 0; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- 顶栏 -->
+  <div class="header">
+    <h1>🌸 中泥坊美容</h1>
+    <p id="headerSub">专注女性美容护肤</p>
+  </div>
+
+  <!-- ====== 首页 ====== -->
+  <div class="tab-content active" id="tab-home">
+    <div class="banner">
+      <div class="banner-text">
+        <div class="big">💆‍♀️</div>
+        <div class="sub">用专业的技术和贴心的服务<br>让每一位顾客焕发自然之美</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">🏪 店铺信息</div>
+      <div class="info-grid" id="storeInfoGrid">
+        <!-- 动态填充 -->
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">✨ 为什么选择我们</div>
+      <div style="display:flex;gap:12px;text-align:center;">
+        <div style="flex:1;"><div style="font-size:32px;">💎</div><div style="font-size:13px;margin-top:6px;">专业手法</div></div>
+        <div style="flex:1;"><div style="font-size:32px;">🌿</div><div style="font-size:13px;margin-top:6px;">天然产品</div></div>
+        <div style="flex:1;"><div style="font-size:32px;">🤝</div><div style="font-size:13px;margin-top:6px;">贴心服务</div></div>
+        <div style="flex:1;"><div style="font-size:32px;">🏠</div><div style="font-size:13px;margin-top:6px;">舒适环境</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 预约页 ====== -->
+  <div class="tab-content" id="tab-booking">
+    <div id="bookingSteps"></div>
+  </div>
+
+  <!-- ====== 服务页 ====== -->
+  <div class="tab-content" id="tab-products">
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title">💆 服务项目</div>
+      <div id="productList"></div>
+    </div>
+  </div>
+
+  <!-- ====== 我的页 ====== -->
+  <div class="tab-content" id="tab-my">
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title">📋 我的预约</div>
+      <div id="myBookings"></div>
+    </div>
+    <div class="card" style="background:var(--primary-light);cursor:pointer;" onclick="showPwdModal()">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:500;">🔧 店主管理后台</span>
+        <span style="color:var(--text-lighter);font-size:13px;">编辑店铺 · 管理预约</span>
+        <span style="color:var(--primary);">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部导航 -->
+  <div class="tab-bar">
+    <div class="tab-item active" onclick="switchTab('home', this)" data-tab="home">
+      <span class="tab-icon">🏠</span>首页
+    </div>
+    <div class="tab-item" onclick="switchTab('booking', this)" data-tab="booking">
+      <span class="tab-icon">📅</span>预约
+    </div>
+    <div class="tab-item" onclick="switchTab('products', this)" data-tab="products">
+      <span class="tab-icon">💆</span>服务
+    </div>
+    <div class="tab-item" onclick="switchTab('my', this)" data-tab="my">
+      <span class="tab-icon">👤</span>我的
+    </div>
+  </div>
+</div>
+
+<!-- 密码弹窗 -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <h3>🔐 店主验证</h3>
+    <input class="input" type="password" id="pwdInput" placeholder="请输入密码" style="margin-bottom:16px;">
+    <div style="display:flex;gap:12px;">
+      <button class="btn-outline" style="flex:1;" onclick="closePwdModal()">取消</button>
+      <button class="btn-primary" style="flex:1;" onclick="checkPwd()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 管理弹窗 -->
+<div class="modal-overlay" id="adminModal">
+  <div class="modal" id="adminContent"></div>
+</div>
+
+<script>
+// ==================== 数据层 ====================
+const DEFAULT_STORE = {
+  name: '中泥坊美容', address: '请编辑店铺地址', phone: '请编辑联系电话',
+  hours: '8:00 - 20:00', desc: '专注女性美容护肤，用专业的技术和贴心的服务，让每一位顾客焕发自然之美。'
+};
+
+function load(key, def) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }
+  catch(e) { return def; }
+}
+function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function getStore() { return load('store', DEFAULT_STORE); }
+function setStore(s) { save('store', s); }
+function getProducts() { return load('products', [
+  { id:'p1', name:'面部深层清洁', price:198, duration:'60分钟', desc:'彻底清除毛孔污垢' },
+  { id:'p2', name:'补水保湿护理', price:258, duration:'75分钟', desc:'深层补水，改善干燥' },
+  { id:'p3', name:'抗衰紧致提升', price:398, duration:'90分钟', desc:'提拉紧致，淡化细纹' },
+  { id:'p4', name:'背部精油SPA', price:358, duration:'60分钟', desc:'舒缓疲劳，放松身心' },
+]);}
+function setProducts(p) { save('products', p); }
+function getBookings() { return load('bookings', []); }
+function setBookings(b) { save('bookings', b); }
+function getTimeSlots() { return load('timeSlots', {}); }
+function setTimeSlots(t) { save('timeSlots', t); }
+
+// ==================== 首页 ====================
+function renderHome() {
+  var s = getStore();
+  document.getElementById('headerSub').textContent = s.desc;
+  var items = [
+    { icon:'📍', label:'地址', val: s.address },
+    { icon:'📞', label:'电话', val: s.phone },
+    { icon:'🕐', label:'营业时间', val: s.hours },
+    { icon:'💡', label:'简介', val: s.desc },
+  ];
+  var html = items.map(function(it){
+    return '<div class="info-item"><div class="icon">'+it.icon+'</div><div class="label">'+it.label+'</div><div class="val">'+it.val+'</div></div>';
+  }).join('');
+  document.getElementById('storeInfoGrid').innerHTML = html;
+}
+
+// ==================== 预约页 ====================
+var bookingState = {
+  step: 1, selectedDate: '', selectedDisplay: '', selectedTimes: [],
+  name: '', phone: '', product: '', remark: ''
+};
+
+function getWeekDay(d) { return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]; }
+
+function renderBooking() {
+  var el = document.getElementById('bookingSteps');
+  var st = bookingState;
+  var html = '';
+
+  // 步骤条
+  html += '<div class="steps">';
+  [1,2,3].forEach(function(n){
+    html += '<div class="step-dot'+(st.step>=n?' on':'')+'"><div class="step-circle">'+n+'</div>'+
+      ['选日期','选时段','填信息'][n-1]+'</div>';
+    if(n<3) html += '<div class="step-line'+(st.step>n?' on':'')+'"></div>';
+  });
+  html += '</div>';
+
+  if (st.step === 1) {
+    // 选日期
+    html += '<div class="card"><div class="section-title">📅 选择预约日期</div><div class="date-scroll">';
+    var today = new Date();
+    for (var i=0; i<7; i++) {
+      var d = new Date(today); d.setDate(today.getDate()+i);
+      var ds = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+      var active = ds===st.selectedDate ? ' active' : '';
+      html += '<div class="date-chip'+active+'" onclick="pickDate(\''+ds+'\',\''+ds+' ('+(i===0?'今天':getWeekDay(d))+'\')">'+
+        '<div class="w">'+(i===0?'今天':getWeekDay(d))+'</div>'+
+        '<div class="d">'+d.getDate()+'</div></div>';
+    }
+    html += '</div><button class="btn-primary" style="margin-top:20px;" onclick="bookingNext()">下一步：选择时段</button></div>';
+  }
+
+  else if (st.step === 2) {
+    var slots = buildTimeSlots(st.selectedDate);
+    html += '<div class="card"><div class="section-title">⏰ 选择时间段（可多选）</div>'+
+      '<div style="text-align:center;padding:10px;background:var(--primary-light);border-radius:10px;margin-bottom:12px;">'+st.selectedDisplay+'</div>'+
+      '<div class="hint">已选 '+st.selectedTimes.length+' 个时段</div><div class="time-grid">';
+    slots.forEach(function(sl){
+      var sel = st.selectedTimes.indexOf(sl.time) > -1;
+      html += '<div class="time-cell'+(!sl.available?' booked':'')+(sel?' selected':'')+
+        '" onclick="toggleTime(\''+sl.time+'\','+sl.available+')">'+sl.time+
+        (sel?'<span class="check">✓</span>':'')+
+        '<span class="remain">'+(sl.available?'可约('+sl.remain+')':'已满')+'</span></div>';
+    });
+    html += '</div><div style="display:flex;justify-content:space-between;margin-top:20px;gap:12px;">'+
+      '<button class="btn-outline" style="flex:1;" onclick="bookingPrev()">上一步</button>'+
+      '<button class="btn-primary" style="flex:1;" onclick="bookingNext()"'+(!st.selectedTimes.length?' disabled':'')+'>下一步：填信息</button></div></div>';
+  }
+
+  else if (st.step === 3) {
+    html += '<div class="card"><div class="section-title">📝 确认预约</div>'+
+      '<div style="background:var(--primary-light);border-radius:12px;padding:14px;margin-bottom:20px;">'+
+      '<div style="display:flex;justify-content:space-between;"><span>预约日期</span><b>'+st.selectedDisplay+'</b></div>'+
+      '<div style="margin-top:10px;">已选时段 ('+st.selectedTimes.length+'个)</div>'+
+      '<div class="time-tags">'+st.selectedTimes.map(function(t){return '<span class="tag tag-gold">⏰ '+t+'</span>';}).join('')+'</div></div>'+
+      '<div class="form-group"><div class="form-label">姓名 *</div><input class="input" id="bkName" value="'+escHtml(st.name)+'" placeholder="请输入姓名"></div>'+
+      '<div class="form-group"><div class="form-label">手机号 *</div><input class="input" type="tel" id="bkPhone" value="'+escHtml(st.phone)+'" placeholder="请输入手机号" maxlength="11"></div>'+
+      '<div class="form-group"><div class="form-label">想做哪项服务（选填）</div><select class="input" id="bkProduct"><option value="">请选择</option>'+
+      getProducts().map(function(p){return '<option value="'+p.name+'"'+(st.product===p.name?' selected':'')+'>'+p.name+' ('+p.price+'元)</option>';}).join('')+
+      '</select></div>'+
+      '<div class="form-group"><div class="form-label">备注（选填）</div><textarea class="input" id="bkRemark">'+escHtml(st.remark)+'</textarea></div>'+
+      '<div style="display:flex;justify-content:space-between;gap:12px;">'+
+      '<button class="btn-outline" style="flex:1;" onclick="bookingPrev()">上一步</button>'+
+      '<button class="btn-primary" style="flex:1;" onclick="submitBooking()">确认预约</button></div></div>';
+  }
+
+  else if (st.step === 4) {
+    html += '<div class="card success-block"><div class="icon">✅</div><h2>预约成功！</h2>'+
+      '<p>预约日期：<b>'+st.selectedDisplay+'</b></p>'+
+      '<div class="time-tags">'+st.selectedTimes.map(function(t){return '<span class="tag tag-green">⏰ '+t+'</span>';}).join('')+'</div>'+
+      '<p style="font-size:13px;color:var(--text-lighter);margin-top:12px;">店主会通过微信或电话与您确认</p>'+
+      '<button class="btn-primary" style="margin-top:20px;" onclick="switchTab(\'my\')">查看我的预约</button>'+
+      '<button class="btn-outline" style="margin-top:10px;" onclick="resetBooking();renderBooking();">再约一个</button></div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function pad(n) { return n<10?'0'+n:''+n; }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function buildTimeSlots(date) {
+  var stored = getTimeSlots();
+  if (stored[date]) return stored[date];
+
+  // 生成默认（8:00-20:00）
+  var slots = [];
+  for (var h=8; h<20; h++) {
+    for (var m=0; m<60; m+=30) {
+      if (h===19 && m===30) continue;
+      var t = pad(h)+':'+(m===0?'00':'30');
+      slots.push({ date:date, time:t, maxSlots:1, booked:0, remain:1, available:true });
+    }
+  }
+  return slots;
+}
+
+function pickDate(date, display) {
+  bookingState.selectedDate = date;
+  bookingState.selectedDisplay = display;
+  bookingState.selectedTimes = [];
+  renderBooking();
+}
+
+function toggleTime(time, avail) {
+  if (!avail) return;
+  var idx = bookingState.selectedTimes.indexOf(time);
+  if (idx > -1) bookingState.selectedTimes.splice(idx, 1);
+  else bookingState.selectedTimes.push(time);
+  bookingState.selectedTimes.sort();
+  renderBooking();
+}
+
+function bookingNext() {
+  var st = bookingState;
+  if (st.step===1 && !st.selectedDate) { alert('请先选择日期'); return; }
+  if (st.step===2 && !st.selectedTimes.length) { alert('请至少选择一个时段'); return; }
+  st.step++;
+  if (st.step===2) renderBooking();
+  else renderBooking();
+}
+
+function bookingPrev() { bookingState.step--; bookingState.selectedTimes=[]; renderBooking(); }
+
+function resetBooking() {
+  bookingState = { step:1, selectedDate:'', selectedDisplay:'', selectedTimes:[], name:'', phone:'', product:'', remark:'' };
+}
+
+function submitBooking() {
+  var st = bookingState;
+  st.name = document.getElementById('bkName').value.trim();
+  st.phone = document.getElementById('bkPhone').value.trim();
+  st.product = document.getElementById('bkProduct').value;
+  st.remark = document.getElementById('bkRemark').value.trim();
+
+  if (!st.name) { alert('请输入姓名'); return; }
+  if (!/^1\d{10}$/.test(st.phone)) { alert('请输入正确的手机号'); return; }
+
+  var bookings = getBookings();
+  st.selectedTimes.forEach(function(t){
+    bookings.push({
+      id:'bk_'+Date.now()+'_'+t.replace(':',''),
+      name:st.name, phone:st.phone, date:st.selectedDate,
+      time:t, product:st.product, status:'pending',
+      remark:st.remark, createTime: new Date().toISOString()
+    });
+  });
+  setBookings(bookings);
+
+  // 更新时段数据
+  var tsStore = getTimeSlots();
+  var slots = tsStore[st.selectedDate] || buildTimeSlots(st.selectedDate);
+  st.selectedTimes.forEach(function(t){
+    slots.forEach(function(sl){
+      if (sl.time===t) { sl.booked++; sl.remain=sl.maxSlots-sl.booked; sl.available=sl.remain>0; }
+    });
+  });
+  tsStore[st.selectedDate] = slots;
+  setTimeSlots(tsStore);
+
+  st.step = 4;
+  renderBooking();
+}
+
+// ==================== 服务页 ====================
+function renderProducts() {
+  var ps = getProducts();
+  if (!ps.length) {
+    document.getElementById('productList').innerHTML = '<div class="empty"><div class="icon">📦</div>暂无服务项目</div>';
+    return;
+  }
+  var html = '';
+  ps.forEach(function(p){
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #f0ebe4;">'+
+      '<div><div style="font-weight:500;font-size:15px;">'+escHtml(p.name)+'</div><div style="font-size:12px;color:var(--text-lighter);margin-top:4px;">'+escHtml(p.desc||'')+' · '+escHtml(p.duration||'')+'</div></div>'+
+      '<div style="color:var(--primary-dark);font-weight:600;">¥'+p.price+'</div></div>';
+  });
+  document.getElementById('productList').innerHTML = html;
+}
+
+// ==================== 我的页 ====================
+function renderMy() {
+  var bookings = getBookings();
+  if (!bookings.length) {
+    document.getElementById('myBookings').innerHTML = '<div class="empty"><div class="icon">📅</div>还没有预约记录</div>';
+    return;
+  }
+  bookings.sort(function(a,b){ return new Date(b.createTime)-new Date(a.createTime); });
+  var statusMap = { pending:'待确认', confirmed:'已确认', done:'已完成', cancelled:'已取消' };
+  var colorMap = { pending:'tag-gold', confirmed:'tag-blue', done:'tag-green', cancelled:'tag-red' };
+  var html = '';
+  bookings.forEach(function(b){
+    html += '<div class="booking-mini"><div><div style="font-weight:500;">'+b.date+' '+b.time+'</div>'+
+      '<div style="font-size:13px;color:var(--text-light);">'+escHtml(b.name)+' · '+escHtml(b.phone)+'</div>'+
+      (b.product?'<div style="font-size:12px;color:var(--text-lighter);">'+escHtml(b.product)+'</div>':'')+
+      '</div>'+
+      '<div><span class="tag '+colorMap[b.status]+'">'+statusMap[b.status]+'</span>'+
+      (b.status==='pending'?'<div style="font-size:11px;color:#c62828;cursor:pointer;text-align:center;margin-top:4px;" onclick="cancelBooking(\''+b.id+'\')">取消</div>':'')+
+      '</div></div>';
+  });
+  document.getElementById('myBookings').innerHTML = html;
+}
+
+function cancelBooking(id) {
+  if (!confirm('确定取消这个预约？')) return;
+  var bookings = getBookings();
+  bookings = bookings.filter(function(b){ return b.id !== id; });
+  setBookings(bookings);
+  renderMy();
+}
+
+// ==================== 管理后台 ====================
+function showPwdModal() { document.getElementById('pwdModal').classList.add('show'); document.getElementById('pwdInput').value=''; }
+function closePwdModal() { document.getElementById('pwdModal').classList.remove('show'); }
+function checkPwd() {
+  var pwd = document.getElementById('pwdInput').value;
+  var saved = localStorage.getItem('adminPwd') || '654321';
+  if (pwd === saved) { closePwdModal(); showAdmin(); }
+  else { alert('密码错误'); }
+}
+
+function showAdmin() {
+  var html = '<h3>🔧 店主管理后台</h3>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">'+
+    '<button class="btn-outline" style="flex:1;min-width:45%;" onclick="adminSection(\'info\')">🏪 店铺信息</button>'+
+    '<button class="btn-outline" style="flex:1;min-width:45%;" onclick="adminSection(\'products\')">💆 服务项目</button>'+
+    '<button class="btn-outline" style="flex:1;min-width:45%;" onclick="adminSection(\'slots\')">⏰ 预约时段</button>'+
+    '<button class="btn-outline" style="flex:1;min-width:45%;" onclick="adminSection(\'bookings\')">📋 查看预约</button>'+
+    '<button class="btn-outline" style="flex:1;min-width:45%;" onclick="adminSection(\'pwd\')">🔑 修改密码</button>'+
+    '</div><div id="adminBody"></div>'+
+    '<button class="btn-outline" style="margin-top:16px;width:100%;" onclick="closeAdmin()">关闭</button>';
+
+  document.getElementById('adminContent').innerHTML = html;
+  document.getElementById('adminModal').classList.add('show');
+  adminSection('info');
+}
+
+function closeAdmin() { document.getElementById('adminModal').classList.remove('show'); renderHome(); renderProducts(); renderMy(); }
+
+function adminSection(section) {
+  var body = document.getElementById('adminBody');
+  if (section === 'info') adminEditInfo(body);
+  else if (section === 'products') adminEditProducts(body);
+  else if (section === 'slots') adminEditSlots(body);
+  else if (section === 'bookings') adminViewBookings(body);
+  else if (section === 'pwd') adminChangePwd(body);
+}
+
+function adminEditInfo(body) {
+  var s = getStore();
+  body.innerHTML = '<h4 style="margin-bottom:12px;">编辑店铺信息</h4>'+
+    '<div class="form-group"><div class="form-label">店名</div><input class="input" id="edName" value="'+escHtml(s.name)+'"></div>'+
+    '<div class="form-group"><div class="form-label">地址</div><input class="input" id="edAddr" value="'+escHtml(s.address)+'"></div>'+
+    '<div class="form-group"><div class="form-label">电话</div><input class="input" id="edPhone" value="'+escHtml(s.phone)+'"></div>'+
+    '<div class="form-group"><div class="form-label">营业时间</div><input class="input" id="edHours" value="'+escHtml(s.hours)+'"></div>'+
+    '<div class="form-group"><div class="form-label">简介</div><textarea class="input" id="edDesc">'+escHtml(s.desc)+'</textarea></div>'+
+    '<button class="btn-primary" onclick="saveStoreInfo()">保存</button>';
+}
+
+function saveStoreInfo() {
+  setStore({
+    name: document.getElementById('edName').value,
+    address: document.getElementById('edAddr').value,
+    phone: document.getElementById('edPhone').value,
+    hours: document.getElementById('edHours').value,
+    desc: document.getElementById('edDesc').value
+  });
+  alert('保存成功！'); closeAdmin();
+}
+
+function adminEditProducts(body) {
+  var ps = getProducts();
+  var html = '<h4 style="margin-bottom:12px;">管理服务项目</h4>';
+  ps.forEach(function(p,i){
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:14px;">'+
+      '<span style="flex:1;font-weight:500;">'+escHtml(p.name)+'</span><span>¥'+p.price+'</span><span style="font-size:12px;color:var(--text-lighter);">'+escHtml(p.duration||'')+'</span>'+
+      '<button style="background:#fce4e4;color:#c62828;border:none;padding:4px 10px;border-radius:8px;cursor:pointer;font-size:12px;" onclick="delProduct('+i+')">删除</button></div>';
+  });
+  html += '<hr style="margin:16px 0;border-color:#eee;"><h4 style="margin-bottom:8px;">添加新服务</h4>'+
+    '<div class="form-group"><input class="input" id="npName" placeholder="服务名称"></div>'+
+    '<div style="display:flex;gap:8px;"><input class="input" id="npPrice" type="number" placeholder="价格" style="flex:1;">'+
+    '<input class="input" id="npDuration" placeholder="时长（如60分钟）" style="flex:1;"></div>'+
+    '<input class="input" id="npDesc" placeholder="描述" style="margin-top:8px;">'+
+    '<button class="btn-primary" style="margin-top:12px;" onclick="addProduct()">添加</button>';
+  body.innerHTML = html;
+}
+
+function addProduct() {
+  var ps = getProducts();
+  ps.push({
+    id:'p'+Date.now(),
+    name: document.getElementById('npName').value,
+    price: parseInt(document.getElementById('npPrice').value)||0,
+    duration: document.getElementById('npDuration').value,
+    desc: document.getElementById('npDesc').value
+  });
+  setProducts(ps);
+  alert('添加成功！');
+  adminEditProducts(document.getElementById('adminBody'));
+}
+
+function delProduct(idx) {
+  if (!confirm('确定删除？')) return;
+  var ps = getProducts();
+  ps.splice(idx, 1);
+  setProducts(ps);
+  adminEditProducts(document.getElementById('adminBody'));
+}
+
+function adminEditSlots(body) {
+  var today = new Date();
+  var currDate = today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate());
+  var html = '<h4 style="margin-bottom:12px;">管理预约时段</h4>'+
+    '<div class="form-group"><div class="form-label">选择日期</div><input class="input" type="date" id="slotDate" value="'+currDate+'" onchange="refreshSlots()"></div>'+
+    '<div id="slotTable"></div>'+
+    '<button class="btn-primary" style="margin-top:16px;" onclick="saveSlotConfig()">💾 保存设置</button>';
+  body.innerHTML = html;
+  refreshSlots();
+}
+
+function refreshSlots() {
+  var date = document.getElementById('slotDate').value;
+  var tsStore = getTimeSlots();
+  var slots = tsStore[date] || buildTimeSlots(date);
+
+  var html = '<div class="section-title">时段设置（8:00-20:00）共'+slots.length+'个</div>'+
+    '<table class="admin-table"><thead><tr><th>时间</th><th>状态</th><th>最大人数</th><th>已约</th><th>操作</th></tr></thead><tbody>';
+  slots.forEach(function(sl,i){
+    html += '<tr><td>'+sl.time+'</td>'+
+      '<td><span style="color:'+(sl.available?'#388e3c':'#c62828')+';">'+(sl.available?'开放':'关闭')+'</span></td>'+
+      '<td><div class="stepper"><button onclick="changeSlotMax('+i+',-1)">−</button><span>'+sl.maxSlots+'</span><button onclick="changeSlotMax('+i+',1)">+</button></div></td>'+
+      '<td>'+sl.booked+'</td>'+
+      '<td><button class="toggle-btn '+(sl.available?'on':'off')+'" onclick="toggleSlot('+i+')">'+(sl.available?'关闭':'开启')+'</button></td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('slotTable').innerHTML = html;
+
+  // 把 slots 存到临时变量
+  document.getElementById('slotTable')._slots = slots;
+  document.getElementById('slotTable')._date = date;
+}
+
+function changeSlotMax(idx, delta) {
+  var el = document.getElementById('slotTable');
+  var slots = el._slots;
+  slots[idx].maxSlots = Math.max(0, slots[idx].maxSlots + delta);
+  slots[idx].remain = slots[idx].maxSlots - slots[idx].booked;
+  slots[idx].available = slots[idx].remain > 0 || slots[idx].maxSlots > 0;
+  refreshSlotTable();
+}
+
+function toggleSlot(idx) {
+  var el = document.getElementById('slotTable');
+  var slots = el._slots;
+  if (slots[idx].available) {
+    slots[idx].maxSlots = Math.max(0, slots[idx].maxSlots - 1);
+    slots[idx].remain = slots[idx].maxSlots - slots[idx].booked;
+    slots[idx].available = false;
+  } else {
+    slots[idx].maxSlots = 1;
+    slots[idx].remain = 1 - slots[idx].booked;
+    slots[idx].available = slots[idx].remain > 0;
+  }
+  refreshSlotTable();
+}
+
+function refreshSlotTable() {
+  var el = document.getElementById('slotTable');
+  var slots = el._slots;
+  var date = el._date;
+  var html = '<div class="section-title">时段设置（8:00-20:00）共'+slots.length+'个</div>'+
+    '<table class="admin-table"><thead><tr><th>时间</th><th>状态</th><th>最大人数</th><th>已约</th><th>操作</th></tr></thead><tbody>';
+  slots.forEach(function(sl,i){
+    html += '<tr><td>'+sl.time+'</td>'+
+      '<td><span style="color:'+(sl.available?'#388e3c':'#c62828')+';">'+(sl.available?'开放':'关闭')+'</span></td>'+
+      '<td><div class="stepper"><button onclick="changeSlotMax('+i+',-1)">−</button><span>'+sl.maxSlots+'</span><button onclick="changeSlotMax('+i+',1)">+</button></div></td>'+
+      '<td>'+sl.booked+'</td>'+
+      '<td><button class="toggle-btn '+(sl.available?'on':'off')+'" onclick="toggleSlot('+i+')">'+(sl.available?'关闭':'开启')+'</button></td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+  el._slots = slots;
+  el._date = date;
+}
+
+function saveSlotConfig() {
+  var el = document.getElementById('slotTable');
+  var slots = el._slots, date = el._date;
+  var tsStore = getTimeSlots();
+  tsStore[date] = slots;
+  setTimeSlots(tsStore);
+  alert('保存成功！');
+}
+
+function adminViewBookings(body) {
+  var bookings = getBookings();
+  if (!bookings.length) { body.innerHTML = '<p>暂无预约</p>'; return; }
+  bookings.sort(function(a,b){ return new Date(b.createTime)-new Date(a.createTime); });
+  var statusMap = { pending:'待确认', confirmed:'已确认', done:'已完成', cancelled:'已取消' };
+  var html = '<h4 style="margin-bottom:12px;">所有预约</h4>';
+  bookings.forEach(function(b){
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee;font-size:14px;">'+
+      '<div><b>'+b.date+' '+b.time+'</b> '+escHtml(b.name)+' '+escHtml(b.phone)+
+      (b.product?'<br><span style="font-size:12px;color:var(--text-lighter);">'+escHtml(b.product)+'</span>':'')+'</div>'+
+      '<div style="text-align:right;"><span style="font-size:13px;">'+statusMap[b.status]+'</span>'+
+      (b.status==='pending'?'<br><button style="font-size:11px;background:var(--primary);color:#fff;border:none;padding:3px 8px;border-radius:6px;cursor:pointer;" onclick="confirmBooking(\''+b.id+'\')">确认</button>':'')+'</div></div>';
+  });
+  body.innerHTML = html;
+}
+
+function confirmBooking(id) {
+  var bookings = getBookings();
+  bookings.forEach(function(b){ if(b.id===id) b.status='confirmed'; });
+  setBookings(bookings);
+  adminViewBookings(document.getElementById('adminBody'));
+}
+
+function adminChangePwd(body) {
+  body.innerHTML = '<h4 style="margin-bottom:12px;">修改管理密码</h4>'+
+    '<div class="form-group"><div class="form-label">新密码</div><input class="input" id="newPwd" type="password"></div>'+
+    '<button class="btn-primary" onclick="saveNewPwd()">保存</button>';
+}
+
+function saveNewPwd() {
+  var np = document.getElementById('newPwd').value;
+  if (!np) { alert('请输入新密码'); return; }
+  localStorage.setItem('adminPwd', np);
+  alert('密码已修改！');
+  closeAdmin();
+}
+
+// ==================== 导航 ====================
+var currentTab = 'home';
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(function(t){ t.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  else document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
+
+  if (tab === 'home') renderHome();
+  else if (tab === 'booking' && bookingState.step === 1) renderBooking();
+  else if (tab === 'products') renderProducts();
+  else if (tab === 'my') renderMy();
+}
+
+// 点击弹窗外部关闭
+document.getElementById('pwdModal').addEventListener('click', function(e){ if(e.target===this) closePwdModal(); });
+document.getElementById('adminModal').addEventListener('click', function(e){ if(e.target===this) closeAdmin(); });
+
+// ==================== 初始化 ====================
+renderHome();
+renderBooking();
+renderProducts();
+renderMy();
+</script>
+<script>
+// 注册 Service Worker（离线缓存）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+// 添加"安装到桌面"提示
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  window._installPrompt = e;
+});
+</script>
+</body>
+</html>

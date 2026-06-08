@@ -58,6 +58,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   cursor:pointer;font-weight:500
 }
 .copy-btn:active{background:#e8d5c4}
+/* 上传区 */
+.upload-area{margin-top:12px}
+.upload-area input[type=file]{display:none}
+.upload-btn{
+  display:flex;align-items:center;gap:8px;padding:14px 18px;background:var(--card);
+  border:2px dashed #e8ddd2;border-radius:12px;cursor:pointer;font-size:14px;
+  color:var(--t2);transition:.25s;width:100%
+}
+.upload-btn:hover{border-color:var(--gold);background:#fff}
+.upload-btn .uicon{font-size:22px}
+.upload-preview{display:none;margin-top:8px;position:relative}
+.upload-preview img{width:100%;border-radius:12px;max-height:300px;object-fit:cover}
+.upload-preview .del-btn{
+  position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;
+  background:rgba(0,0,0,.5);color:#fff;border:none;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center
+}
+/* 配图切换 */
+.img-toggle{display:flex;gap:8px;margin-bottom:10px}
+.img-toggle button{
+  flex:1;padding:10px;border:2px solid #e8ddd2;border-radius:10px;
+  background:#fff;cursor:pointer;font-size:13px;color:var(--t2);transition:.2s
+}
+.img-toggle button.active{border-color:var(--gold);background:var(--pink);color:var(--gold2)}
 .img-box{
   background:var(--card);border-radius:14px;overflow:hidden;border:1px solid #eee;
   min-height:200px;display:flex;align-items:center;justify-content:center;
@@ -118,6 +142,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   <textarea id="extraInput" placeholder="补充你想推销的产品/活动内容...&#10;比如：玻尿酸补水项目 198元体验价"></textarea>
 </div>
 
+<!-- 拍照/上传图片 -->
+<div class="upload-area">
+  <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+  <label for="photoInput" class="upload-btn">
+    <span class="uicon">📸</span> 拍照或上传产品图/店铺图<span style="font-size:11px;color:var(--t3);margin-left:auto;">选填</span>
+  </label>
+  <div class="upload-preview" id="photoPreview">
+    <button class="del-btn" onclick="removePhoto()">✕</button>
+    <img id="photoImg">
+  </div>
+</div>
+
 <!-- 生成按钮 -->
 <button class="big-btn btn-generate" id="genBtn" onclick="generate()">
   ✨ 一键生成文案+配图
@@ -157,7 +193,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 
 <script>
 var currentScene = 'new';
+var uploadedPhoto = null;
 var sceneNames = {new:'新品上线',sale:'限时优惠',tips:'护肤知识',review:'顾客好评',festival:'节日营销',daily:'日常营业'};
+
+function handlePhoto(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    uploadedPhoto = ev.target.result;
+    document.getElementById('photoImg').src = uploadedPhoto;
+    document.getElementById('photoPreview').style.display = 'block';
+    document.querySelector('.upload-btn').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(){
+  uploadedPhoto = null;
+  document.getElementById('photoInput').value = '';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.querySelector('.upload-btn').style.display = 'flex';
+}
 
 function pickScene(el, scene){
   currentScene = scene;
@@ -236,26 +293,34 @@ function generate(){
   document.getElementById('textResult').innerHTML = '<button class="copy-btn" onclick="copyText()">📋 复制文案</button>' + copy.replace(/\n/g,'<br>');
   document.getElementById('previewText').innerHTML = copy.replace(/\n/g,'<br>');
 
-  // 生成配图
-  var imgUrl = generateImage(currentScene, extra);
-  var img = new Image();
-  img.onload = function(){
-    document.getElementById('imgResult').innerHTML = '<img src="'+imgUrl+'" alt="AI配图">';
-    document.getElementById('previewImg').innerHTML = '<img src="'+imgUrl+'" alt="AI配图" style="width:100%;display:block">';
+  // 配图：优先用商家上传的照片，没有则AI生成
+  if (uploadedPhoto) {
+    var img = new Image();
+    img.onload = function(){
+      document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">📸 商家实拍照片</div><img src="'+uploadedPhoto+'" alt="商家照片">';
+      document.getElementById('previewImg').innerHTML = '<img src="'+uploadedPhoto+'" alt="商家照片" style="width:100%;display:block">';
+      finishGenerate(btn);
+    };
+    img.src = uploadedPhoto;
+  } else {
+    document.getElementById('imgResult').innerHTML = '<div class="loading"><span class="spinner">🎨</span>AI正在生成配图...</div>';
+    document.getElementById('previewImg').innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);">🎨 AI配图生成中...</div>';
+    var imgUrl = generateImage(currentScene, extra);
+    var img = new Image();
+    img.onload = function(){
+      document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🤖 AI自动生成</div><img src="'+imgUrl+'" alt="AI配图">';
+      document.getElementById('previewImg').innerHTML = '<img src="'+imgUrl+'" alt="AI配图" style="width:100%;display:block">';
+      finishGenerate(btn);
+    };
+    img.onerror = function(){ finishGenerate(btn); };
+    img.src = imgUrl;
+  }
+
+  function finishGenerate(btn){
     btn.disabled = false;
     btn.textContent = '✨ 一键生成文案+配图';
     document.getElementById('result').scrollIntoView({behavior:'smooth'});
-  };
-  img.onerror = function(){
-    // 降级：用占位图
-    var fallback = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect fill="#f5ede4" width="600" height="400"/><text x="300" y="180" text-anchor="middle" font-size="80">🌸</text><text x="300" y="260" text-anchor="middle" font-size="20" fill="#B8895A">AI配图</text><text x="300" y="300" text-anchor="middle" font-size="14" fill="#B0A090">AI配图 · ' + sceneNames[currentScene] + '</text></svg>');
-    document.getElementById('imgResult').innerHTML = '<img src="'+fallback+'" alt="配图">';
-    document.getElementById('previewImg').innerHTML = '<img src="'+fallback+'" alt="配图" style="width:100%;display:block">';
-    btn.disabled = false;
-    btn.textContent = '✨ 一键生成文案+配图';
-    document.getElementById('result').scrollIntoView({behavior:'smooth'});
-  };
-  img.src = imgUrl;
+  }
 }
 
 function copyText(){

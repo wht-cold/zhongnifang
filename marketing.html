@@ -261,20 +261,28 @@ function generateCopy(scene, extra){
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// AI配图生成 — 免费免注册
-function generateImage(scene, extra){
-  var prompts = {
-    new: 'beauty skincare product elegant display, soft pink and gold tones, minimalist, clean aesthetic, professional beauty salon style',
-    sale: 'luxury spa promotion beauty treatment, warm golden lighting, inviting atmosphere, elegantly presented, beauty salon',
-    tips: 'fresh natural skincare ingredients aloe rose water, clean white background, spa aesthetics, soft lighting, healthy skin',
-    review: 'satisfied customer glowing skin beauty treatment results, soft warm lighting, happy relaxed, beauty salon, professional',
-    festival: 'festive celebration beauty spa, elegant decorations, warm inviting, golden accents, beauty salon, festive mood',
-    daily: 'cozy warm beauty salon interior, flowers tea, soft morning light, peaceful atmosphere, clean elegant, welcoming'
+// 即时配图模板 — 秒出
+function generateTemplateImg(scene){
+  var colors = {
+    new:    ['#fce4ec','#f8bbd0','🌸','新品上线'],
+    sale:   ['#fff3e0','#ffe0b2','🎉','限时优惠'],
+    tips:   ['#e8f5e9','#c8e6c9','💡','护肤知识'],
+    review: ['#f3e5f5','#e1bee7','💬','顾客好评'],
+    festival:['#fff8e1','#ffecb3','🎊','节日特惠'],
+    daily:  ['#f5f0e8','#e8d5c4','📷','日常营业']
   };
-  var basePrompt = prompts[scene] || prompts.daily;
-  var finalPrompt = basePrompt + (extra ? ', ' + extra : '');
-  var url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(finalPrompt) + '?width=600&height=600&nologo=true&seed=' + Math.floor(Math.random()*10000);
-  return url;
+  var c = colors[scene] || colors.daily;
+  return 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="500" viewBox="0 0 600 500">'+
+    '<defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:'+c[0]+'"/><stop offset="100%" style="stop-color:'+c[1]+'"/></linearGradient></defs>'+
+    '<rect fill="url(#g)" width="600" height="500"/>'+
+    '<text x="300" y="180" text-anchor="middle" font-size="120">'+c[2]+'</text>'+
+    '<text x="300" y="280" text-anchor="middle" font-size="28" fill="#555" font-weight="bold">'+c[3]+'</text>'+
+    '<text x="300" y="330" text-anchor="middle" font-size="16" fill="#999">中泥坊美容</text>'+
+    '<rect x="180" y="380" width="240" height="56" rx="28" fill="#fff" opacity="0.8"/>'+
+    '<text x="300" y="416" text-anchor="middle" font-size="18" fill="#888">📍 点击预约</text>'+
+    '</svg>'
+  );
 }
 
 function generate(){
@@ -293,34 +301,19 @@ function generate(){
   document.getElementById('textResult').innerHTML = '<button class="copy-btn" onclick="copyText()">📋 复制文案</button>' + copy.replace(/\n/g,'<br>');
   document.getElementById('previewText').innerHTML = copy.replace(/\n/g,'<br>');
 
-  // 配图：优先用商家上传的照片，没有则AI生成
+  // 配图：有照片用照片，没有用模板（秒出）
   if (uploadedPhoto) {
-    var img = new Image();
-    img.onload = function(){
-      document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">📸 商家实拍照片</div><img src="'+uploadedPhoto+'" alt="商家照片">';
-      document.getElementById('previewImg').innerHTML = '<img src="'+uploadedPhoto+'" alt="商家照片" style="width:100%;display:block">';
-      finishGenerate(btn);
-    };
-    img.src = uploadedPhoto;
+    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">📸 商家实拍照片</div><img src="'+uploadedPhoto+'" alt="实拍照片">';
+    document.getElementById('previewImg').innerHTML = '<img src="'+uploadedPhoto+'" alt="实拍照片" style="width:100%;display:block">';
   } else {
-    document.getElementById('imgResult').innerHTML = '<div class="loading"><span class="spinner">🎨</span>AI正在生成配图...</div>';
-    document.getElementById('previewImg').innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);">🎨 AI配图生成中...</div>';
-    var imgUrl = generateImage(currentScene, extra);
-    var img = new Image();
-    img.onload = function(){
-      document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🤖 AI自动生成</div><img src="'+imgUrl+'" alt="AI配图">';
-      document.getElementById('previewImg').innerHTML = '<img src="'+imgUrl+'" alt="AI配图" style="width:100%;display:block">';
-      finishGenerate(btn);
-    };
-    img.onerror = function(){ finishGenerate(btn); };
-    img.src = imgUrl;
+    var tplImg = generateTemplateImg(currentScene);
+    document.getElementById('imgResult').innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px;text-align:center;">🎨 装饰卡片 · 建议拍照替换</div><img src="'+tplImg+'" alt="装饰图">';
+    document.getElementById('previewImg').innerHTML = '<img src="'+tplImg+'" alt="装饰图" style="width:100%;display:block">';
   }
 
-  function finishGenerate(btn){
-    btn.disabled = false;
-    btn.textContent = '✨ 一键生成文案+配图';
-    document.getElementById('result').scrollIntoView({behavior:'smooth'});
-  }
+  btn.disabled = false;
+  btn.textContent = '✨ 一键生成文案+配图';
+  document.getElementById('result').scrollIntoView({behavior:'smooth'});
 }
 
 function copyText(){

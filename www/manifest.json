@@ -1,22 +1,14 @@
 {
-  "name": "中泥坊美容",
-  "short_name": "中泥坊",
-  "description": "中泥坊美容预约系统",
-  "start_url": ".",
+  "name": "AI营销助手",
+  "short_name": "营销助手",
+  "description": "一键生成朋友圈文案和配图",
+  "start_url": "marketing.html",
   "display": "standalone",
-  "background_color": "#f8f4f0",
+  "background_color": "#fdf9f5",
   "theme_color": "#D4A574",
   "orientation": "portrait",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
